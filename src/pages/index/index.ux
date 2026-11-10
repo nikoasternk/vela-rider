@@ -1,11 +1,20 @@
 <template>
   <stack class="screen">
     <div
-      class="touch-zone"
+      class="game-layout"
       ontouchstart="onScreenHoldStart"
       ontouchend="onScreenHoldEnd"
       ontouchcancel="onScreenHoldEnd"
     >
+      <div class="hud-top">
+        <div class="hud-row">
+          <div class="hud-spacer"></div>
+          <text class="hud-score">{{ score }}</text>
+          <text class="cfg-btn" onclick="onOpenSettings">⚙</text>
+        </div>
+        <text class="hud-info">{{ infoText }}</text>
+      </div>
+
       <stack class="viewport">
         <chart
           class="track-chart"
@@ -15,34 +24,19 @@
         ></chart>
 
         <div class="sprite-layer">
+          <div class="haz-node" style="left: {{ hazX }}px; top: {{ hazY }}px;"></div>
           <div class="gem-node" style="left: {{ gemX }}px; top: {{ gemY }}px;"></div>
-          <div
-            class="bike-wheel"
-            style="left: {{ rx }}px; top: {{ ry }}px; border-color: {{ trackColor }};"
-          ></div>
-          <div
-            class="bike-wheel"
-            style="left: {{ fx }}px; top: {{ fy }}px; border-color: {{ trackColor }};"
-          ></div>
-          <div
-            class="bike-core"
-            style="left: {{ cx }}px; top: {{ cy }}px; background-color: {{ bikeColor }};"
-          ></div>
+          <div class="bike-wheel" style="left: {{ rx }}px; top: {{ ry }}px;"></div>
+          <div class="bike-wheel" style="left: {{ fx }}px; top: {{ fy }}px;"></div>
+          <div class="bike-core" style="left: {{ cx }}px; top: {{ cy }}px;"></div>
           <div class="bike-visor" style="left: {{ vxVisor }}px; top: {{ vyVisor }}px;"></div>
         </div>
       </stack>
-    </div>
 
-    <div class="hud-top">
-      <div class="hud-row">
-        <div class="hud-spacer"></div>
-        <text class="hud-score">{{ score }}</text>
-        <text class="cfg-btn" onclick="onOpenSettings">⚙</text>
+      <div class="bottom-bar">
+        <text class="fps-counter">{{ fpsText }}</text>
       </div>
-      <text class="hud-info" style="color: {{ trackColor }};">{{ infoText }}</text>
     </div>
-
-    <text class="fps-counter">{{ fpsText }}</text>
 
     <div class="overlay-screen" if="{{ showCrash }}">
       <text class="crash-title">{{ crashTitle }}</text>
@@ -76,15 +70,23 @@ let lastTickMs = 0
 let fpsFrameCount = 0
 let fpsWindowStartMs = 0
 
+const sharedDataset = {
+  strokeColor: '#00F0FF',
+  fillColor: '#042230',
+  gradient: false,
+  data: [
+    120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120,
+    120, 120
+  ]
+}
+
 export default {
   private: {
     score: 0,
     bestScore: 0,
     gems: 0,
-    infoText: 'TAP & HOLD SCREEN',
+    infoText: 'УДЕРЖИВАЙ ЭКРАН',
     fpsText: '60 FPS',
-    trackColor: '#00F0FF',
-    bikeColor: '#FF006E',
     isHolding: false,
     showCrash: false,
     showSettings: false,
@@ -97,27 +99,29 @@ export default {
     fillLabel: 'ЛИНИЯ',
     turboSpin: false,
     spinLabel: 'НОРМ',
-    rx: 39,
-    ry: 240,
-    cx: 50,
-    cy: 240,
-    fx: 61,
-    fy: 240,
-    vxVisor: 50,
-    vyVisor: 231,
+    rx: 41,
+    ry: 140,
+    cx: 52,
+    cy: 140,
+    fx: 63,
+    fy: 140,
+    vxVisor: 52,
+    vyVisor: 131,
     gemX: -30,
     gemY: -30,
+    hazX: -30,
+    hazY: -30,
     lineOpts: {
       xAxis: {
         min: 0,
-        max: 20,
-        axisTick: 20,
+        max: 16,
+        axisTick: 16,
         display: false
       },
       yAxis: {
         min: 0,
-        max: 480,
-        axisTick: 10,
+        max: 260,
+        axisTick: 8,
         display: false
       },
       series: {
@@ -127,17 +131,7 @@ export default {
         }
       }
     },
-    lineData: [
-      {
-        strokeColor: '#00F0FF',
-        fillColor: '#042230',
-        gradient: false,
-        data: [
-          230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230,
-          230, 230, 230, 230, 230, 230, 230
-        ]
-      }
-    ]
+    lineData: [sharedDataset]
   },
 
   onInit() {
@@ -172,7 +166,7 @@ export default {
   loadSavedData() {
     try {
       storage.get({
-        key: 'rider_band10_v2',
+        key: 'rider_band10_v3',
         success: (data) => {
           if (data) {
             try {
@@ -218,7 +212,7 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'rider_band10_v2',
+        key: 'rider_band10_v3',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
@@ -240,10 +234,10 @@ export default {
     } catch (e) {}
   },
 
-  getLoopDelay() {
-    if (this.fpsTargetMode === 0) return 20
-    if (this.fpsTargetMode === 1) return 26
-    return 34
+  getMinYieldMs() {
+    if (this.fpsTargetMode === 0) return 4
+    if (this.fpsTargetMode === 1) return 10
+    return 18
   },
 
   startLoop() {
@@ -261,7 +255,7 @@ export default {
 
       fpsFrameCount += 1
       const elapsedFps = now - fpsWindowStartMs
-      if (elapsedFps >= 500) {
+      if (elapsedFps >= 800) {
         const currentFps = Math.min(60, Math.round((fpsFrameCount * 1000) / elapsedFps))
         const nextFpsText = currentFps + ' FPS'
         if (this.fpsText !== nextFpsText) {
@@ -271,7 +265,7 @@ export default {
         fpsWindowStartMs = now
       }
 
-      if (!this.showSettings && engineInstance.state.status === 'playing') {
+      if (!this.showSettings && !this.showCrash && engineInstance.state.status === 'playing') {
         const res = engineInstance.step(dt, this.isHolding)
         this.syncView(engineInstance.getRenderSnapshot(), false)
 
@@ -280,18 +274,15 @@ export default {
         } else if (res.event === 'crash') {
           this.isHolding = false
           this.showCrash = true
-          this.crashTitle =
-            engineInstance.state.crashReason === 'VOID FALL!'
-              ? 'В ПРОПАСТЬ!'
-              : 'РАЗБИЛСЯ!'
+          this.crashTitle = engineInstance.state.crashReason || 'РАЗБИЛСЯ!'
           this.pulseHaptic('long')
           this.saveProgress()
         }
       }
 
-      loopTimer = setTimeout(tick, this.getLoopDelay())
+      loopTimer = setTimeout(tick, this.getMinYieldMs())
     }
-    loopTimer = setTimeout(tick, this.getLoopDelay())
+    loopTimer = setTimeout(tick, this.getMinYieldMs())
   },
 
   stopLoop() {
@@ -303,18 +294,12 @@ export default {
 
   syncView(snap, forceChart) {
     if (forceChart || snap.status === 'playing') {
-      this.lineData = [
-        {
-          strokeColor: snap.trackColor,
-          fillColor: snap.fillColor,
-          gradient: this.fillEnabled,
-          data: snap.chartData.slice(0)
-        }
-      ]
+      sharedDataset.strokeColor = snap.trackColor
+      sharedDataset.fillColor = snap.fillColor
+      sharedDataset.gradient = this.fillEnabled
+      sharedDataset.data = snap.chartData
+      this.lineData = [sharedDataset]
     }
-
-    if (this.trackColor !== snap.trackColor) this.trackColor = snap.trackColor
-    if (this.bikeColor !== snap.bikeColor) this.bikeColor = snap.bikeColor
 
     const b = snap.bike
     if (this.rx !== b.rx) this.rx = b.rx
@@ -328,6 +313,8 @@ export default {
 
     if (this.gemX !== snap.gemX) this.gemX = snap.gemX
     if (this.gemY !== snap.gemY) this.gemY = snap.gemY
+    if (this.hazX !== snap.hazX) this.hazX = snap.hazX
+    if (this.hazY !== snap.hazY) this.hazY = snap.hazY
 
     if (this.score !== snap.score) this.score = snap.score
     if (this.bestScore !== snap.bestScore) this.bestScore = snap.bestScore
@@ -335,7 +322,7 @@ export default {
 
     const nextInfo = snap.bannerText
       ? snap.bannerText
-      : 'BEST ' + snap.bestScore + '  ◆ ' + snap.gems
+      : 'РЕКОРД ' + snap.bestScore + '  ◆ ' + snap.gems
     if (this.infoText !== nextInfo) {
       this.infoText = nextInfo
     }
@@ -436,37 +423,22 @@ export default {
   background-color: #000000;
 }
 
-.touch-zone {
+.game-layout {
   width: 212px;
   height: 520px;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-}
-
-.viewport {
-  width: 200px;
-  height: 480px;
+  justify-content: space-between;
   background-color: #000000;
 }
 
-.track-chart {
-  width: 200px;
-  height: 480px;
-}
-
-.sprite-layer {
-  width: 200px;
-  height: 480px;
-}
-
 .hud-top {
-  position: absolute;
-  left: 14px;
-  top: 16px;
   width: 184px;
-  height: 76px;
+  height: 82px;
+  margin-top: 14px;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
 }
 
 .hud-row {
@@ -505,10 +477,32 @@ export default {
   margin-top: 2px;
 }
 
+.viewport {
+  width: 208px;
+  height: 260px;
+  background-color: #000000;
+}
+
+.track-chart {
+  width: 208px;
+  height: 260px;
+}
+
+.sprite-layer {
+  width: 208px;
+  height: 260px;
+}
+
+.bottom-bar {
+  width: 212px;
+  height: 140px;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 10px;
+}
+
 .fps-counter {
-  position: absolute;
-  left: 56px;
-  top: 494px;
   width: 100px;
   height: 20px;
   font-size: 13px;
@@ -548,6 +542,14 @@ export default {
   height: 10px;
   border-radius: 5px;
   background-color: #FFD700;
+}
+
+.haz-node {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  background-color: #FF1744;
 }
 
 .overlay-screen {
