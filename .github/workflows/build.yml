@@ -1,12 +1,6 @@
 name: Build and Release RPK
 
 on:
-  push:
-    branches:
-      - main
-      - master
-    tags:
-      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -30,7 +24,7 @@ jobs:
       - name: Generate release signing certificates
         run: |
           mkdir -p sign/release sign/debug
-          openssl req -newkey rsa:2048 -nodes -keyout sign/release/private.pem -x509 -days 3650 -out sign/release/certificate.pem -subj "/C=CN/ST=Beijing/L=Beijing/O=Xiaomi/OU=Vela/CN=com.vela.rider.band10"
+          openssl req -newkey rsa:2048 -nodes -keyout sign/release/private.pem -x509 -days 3650 -out sign/release/certificate.pem -subj "/C=CN/ST=Beijing/L=Beijing/O=Xiaomi/OU=Vela/CN=com.band.rider"
           cp sign/release/private.pem sign/private.pem
           cp sign/release/certificate.pem sign/certificate.pem
           cp sign/release/private.pem sign/debug/private.pem
@@ -46,7 +40,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: Rider Band 10 v1.0.${{ github.run_number }}
+          name: Rider Vela v1.0.${{ github.run_number }}
           files: dist/*.rpk
           generate_release_notes: true
         env:
