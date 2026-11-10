@@ -1,0 +1,485 @@
+<template>
+  <div class="screen">
+    <div class="hud">
+      <div class="hud-top">
+        <text class="hud-best">BEST {{ bestScore }}</text>
+        <text class="hud-gems">◆ {{ gems }}</text>
+      </div>
+      <div class="hud-main">
+        <text class="hud-score">{{ score }}</text>
+        <div class="theme-chip" onclick="onSwitchTheme">
+          <text class="theme-text">{{ themeName }}</text>
+        </div>
+      </div>
+    </div>
+
+    <div class="banner-bar">
+      <text class="banner-text" style="color: {{ trackColor }};">{{ bannerText }}</text>
+    </div>
+
+    <stack
+      class="viewport"
+      ontouchstart="onHoldStart"
+      ontouchend="onHoldEnd"
+      ontouchcancel="onHoldEnd"
+    >
+      <div class="terrain-row">
+        <div class="terrain-col" for="{{ (idx, col) in columns }}" tid="id">
+          <div class="sky-slice" style="height: {{ col.skyH }}px;"></div>
+          <div class="haz-slice" style="height: {{ col.hazH }}px;"></div>
+          <div
+            class="surf-slice"
+            style="height: {{ col.surfH }}px; background-color: {{ col.surfColor }};"
+          ></div>
+          <div
+            class="sub-slice"
+            style="height: {{ col.subH }}px; background-color: {{ col.subColor }};"
+          ></div>
+        </div>
+      </div>
+
+      <div class="sprite-layer">
+        <div
+          class="gem-node"
+          for="{{ (idx, g) in gemsView }}"
+          tid="id"
+          style="left: {{ g.x }}px; top: {{ g.y }}px; background-color: {{ gemColor }}; border-color: #FFFFFF;"
+        ></div>
+
+        <div
+          class="spark-node"
+          for="{{ (idx, p) in particles }}"
+          tid="id"
+          style="left: {{ p.x }}px; top: {{ p.y }}px; background-color: {{ p.color }};"
+        ></div>
+
+        <div
+          class="bike-wheel"
+          style="left: {{ rx }}px; top: {{ ry }}px; border-color: {{ wheelColor }};"
+        ></div>
+        <div
+          class="bike-wheel"
+          style="left: {{ fx }}px; top: {{ fy }}px; border-color: {{ wheelColor }};"
+        ></div>
+        <div
+          class="bike-core"
+          style="left: {{ cx }}px; top: {{ cy }}px; background-color: {{ bikeColor }}; border-color: {{ bikeColor }};"
+        ></div>
+        <div
+          class="bike-visor"
+          style="left: {{ hx }}px; top: {{ hy }}px; background-color: {{ visorColor }}; border-color: {{ bikeColor }};"
+        ></div>
+      </div>
+    </stack>
+
+    <div
+      class="control-deck"
+      ontouchstart="onHoldStart"
+      ontouchend="onHoldEnd"
+      ontouchcancel="onHoldEnd"
+      onclick="onDeckTap"
+    >
+      <div
+        class="deck-btn"
+        style="border-color: {{ isHolding ? bikeColor : trackColor }}; background-color: {{ isHolding ? '#160712' : '#06151F' }};"
+      >
+        <text class="deck-title" style="color: {{ isHolding ? bikeColor : trackColor }};">{{ deckMainLabel }}</text>
+        <text class="deck-sub">{{ deckSubLabel }}</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import storage from '@system.storage'
+import vibrator from '@system.vibrator'
+import brightness from '@system.brightness'
+import { createGameEngine, THEMES } from '../../common/engine.js'
+
+let engineInstance = null
+
+export default {
+  private: {
+    status: 'menu',
+    score: 0,
+    bestScore: 0,
+    gems: 0,
+    themeName: 'CYBER',
+    trackColor: '#00F0FF',
+    bikeColor: '#FF0055',
+    wheelColor: '#00F0FF',
+    visorColor: '#FFFFFF',
+    gemColor: '#FFD700',
+    bannerText: 'HOLD TO RIDE',
+    deckMainLabel: 'START RIDER',
+    deckSubLabel: 'HOLD: GAS / AIR FLIP',
+    isHolding: false,
+    rx: 38,
+    ry: 184,
+    fx: 58,
+    fy: 184,
+    cx: 48,
+    cy: 182,
+    hx: 48,
+    hy: 174,
+    columns: [],
+    particles: [],
+    gemsView: [],
+    loopTimer: null
+  },
+
+  onInit() {
+    engineInstance = createGameEngine(Date.now() & 0xffffffff)
+    const snap = engineInstance.getRenderSnapshot()
+    this.columns = snap.columns
+    this.particles = snap.particles
+    this.gemsView = snap.gemsView
+    this.syncView(snap)
+    this.loadSavedData()
+  },
+
+  onShow() {
+    try {
+      if (brightness && typeof brightness.setKeepScreenOn === 'function') {
+        brightness.setKeepScreenOn({ keepScreenOn: true })
+      }
+    } catch (e) {}
+    this.startLoop()
+  },
+
+  onHide() {
+    this.isHolding = false
+    this.stopLoop()
+  },
+
+  onDestroy() {
+    this.stopLoop()
+    try {
+      if (brightness && typeof brightness.setKeepScreenOn === 'function') {
+        brightness.setKeepScreenOn({ keepScreenOn: false })
+      }
+    } catch (e) {}
+  },
+
+  loadSavedData() {
+    try {
+      storage.get({
+        key: 'rider_band10_save',
+        success: (data) => {
+          if (data) {
+            try {
+              const parsed = JSON.parse(data)
+              if (typeof parsed.best === 'number') {
+                this.bestScore = parsed.best
+                engineInstance.state.bestScore = parsed.best
+              }
+              if (typeof parsed.gems === 'number') {
+                this.gems = parsed.gems
+                engineInstance.state.gems = parsed.gems
+              }
+            } catch (e) {}
+          }
+        }
+      })
+    } catch (e) {}
+  },
+
+  saveProgress() {
+    try {
+      storage.set({
+        key: 'rider_band10_save',
+        value: JSON.stringify({
+          best: this.bestScore,
+          gems: this.gems
+        })
+      })
+    } catch (e) {}
+  },
+
+  pulseHaptic(mode) {
+    try {
+      if (vibrator && typeof vibrator.vibrate === 'function') {
+        vibrator.vibrate({ mode: mode || 'short' })
+      }
+    } catch (e) {}
+  },
+
+  startLoop() {
+    this.stopLoop()
+    this.loopTimer = setInterval(() => {
+      if (!engineInstance) return
+      const res = engineInstance.step(0.033, this.isHolding)
+      const snap = engineInstance.getRenderSnapshot()
+      this.syncView(snap)
+
+      if (res.event === 'flip' || res.event === 'gem' || res.event === 'land') {
+        this.pulseHaptic('short')
+      } else if (res.event === 'crash') {
+        this.isHolding = false
+        this.pulseHaptic('long')
+        this.saveProgress()
+      }
+    }, 33)
+  },
+
+  stopLoop() {
+    if (this.loopTimer !== null) {
+      clearInterval(this.loopTimer)
+      this.loopTimer = null
+    }
+  },
+
+  syncView(snap) {
+    this.status = snap.status
+    this.score = snap.score
+    this.bestScore = snap.bestScore
+    this.gems = snap.gems
+    this.bannerText = snap.bannerText
+    this.themeName = snap.theme.name
+    this.trackColor = snap.theme.track
+    this.bikeColor = snap.theme.bike
+    this.wheelColor = snap.theme.wheel
+    this.visorColor = snap.theme.visor
+    this.gemColor = snap.theme.gem
+
+    this.rx = snap.bike.rx
+    this.ry = snap.bike.ry
+    this.fx = snap.bike.fx
+    this.fy = snap.bike.fy
+    this.cx = snap.bike.cx
+    this.cy = snap.bike.cy
+    this.hx = snap.bike.hx
+    this.hy = snap.bike.hy
+
+    if (snap.status === 'menu') {
+      this.deckMainLabel = 'START RIDER'
+      this.deckSubLabel = 'HOLD: GAS / AIR FLIP'
+    } else if (snap.status === 'gameover') {
+      this.deckMainLabel = 'TAP TO RETRY'
+      this.deckSubLabel = 'SCORE ' + snap.score + '  BEST ' + snap.bestScore
+    } else {
+      this.deckMainLabel = this.isHolding ? 'THRUST + FLIP' : 'HOLD DECK'
+      this.deckSubLabel = snap.bike.onGround ? 'GROUND DRIVE' : 'AIR SPIN ACTIVE'
+    }
+  },
+
+  onHoldStart() {
+    if (!engineInstance) return
+    if (engineInstance.state.status !== 'playing') {
+      engineInstance.startGame()
+      this.pulseHaptic('short')
+    }
+    this.isHolding = true
+  },
+
+  onHoldEnd() {
+    this.isHolding = false
+  },
+
+  onDeckTap() {
+    if (!engineInstance) return
+    if (engineInstance.state.status !== 'playing') {
+      engineInstance.startGame()
+      this.pulseHaptic('short')
+    }
+  },
+
+  onSwitchTheme() {
+    if (!engineInstance) return
+    const nextTheme = engineInstance.cycleTheme()
+    const snap = engineInstance.getRenderSnapshot()
+    this.syncView(snap)
+    this.themeName = nextTheme.name
+    this.pulseHaptic('short')
+  }
+}
+</script>
+
+<style>
+.screen {
+  width: 212px;
+  height: 520px;
+  flex-direction: column;
+  align-items: center;
+  background-color: #000000;
+}
+
+.hud {
+  width: 184px;
+  height: 78px;
+  margin-top: 14px;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hud-top {
+  width: 184px;
+  height: 24px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hud-best {
+  font-size: 16px;
+  color: #8899AA;
+}
+
+.hud-gems {
+  font-size: 16px;
+  color: #FFD700;
+}
+
+.hud-main {
+  width: 184px;
+  height: 46px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hud-score {
+  font-size: 38px;
+  color: #FFFFFF;
+}
+
+.theme-chip {
+  width: 68px;
+  height: 30px;
+  border-radius: 15px;
+  border-width: 2px;
+  border-color: #263849;
+  background-color: #0A121C;
+  justify-content: center;
+  align-items: center;
+}
+
+.theme-text {
+  font-size: 14px;
+  color: #00F0FF;
+}
+
+.banner-bar {
+  width: 200px;
+  height: 26px;
+  justify-content: center;
+  align-items: center;
+}
+
+.banner-text {
+  font-size: 18px;
+  color: #00F0FF;
+}
+
+.viewport {
+  width: 210px;
+  height: 300px;
+  background-color: #000000;
+}
+
+.terrain-row {
+  width: 210px;
+  height: 300px;
+  flex-direction: row;
+}
+
+.terrain-col {
+  width: 10px;
+  height: 300px;
+  flex-direction: column;
+}
+
+.sky-slice {
+  width: 10px;
+  background-color: #000000;
+}
+
+.haz-slice {
+  width: 10px;
+  background-color: #FF1744;
+  border-radius: 2px;
+  border-width: 1px;
+  border-color: #FFFFFF;
+}
+
+.surf-slice {
+  width: 10px;
+  border-radius: 2px;
+}
+
+.sub-slice {
+  width: 10px;
+}
+
+.sprite-layer {
+  width: 210px;
+  height: 300px;
+}
+
+.bike-wheel {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  border-width: 3px;
+  background-color: #000000;
+}
+
+.bike-core {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  border-width: 2px;
+}
+
+.bike-visor {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  border-width: 1px;
+}
+
+.gem-node {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  border-width: 2px;
+}
+
+.spark-node {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.control-deck {
+  width: 212px;
+  height: 102px;
+  justify-content: center;
+  align-items: center;
+}
+
+.deck-btn {
+  width: 184px;
+  height: 76px;
+  border-radius: 38px;
+  border-width: 3px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.deck-title {
+  font-size: 20px;
+}
+
+.deck-sub {
+  font-size: 13px;
+  color: #7C8B99;
+  margin-top: 4px;
+}
+</style>
