@@ -5,10 +5,7 @@
   "scripts": {
     "icon": "node tools/gen-icon.mjs",
     "test": "node tools/gen-icon.mjs && node tools/test-engine.mjs",
-    "prebuild": "node tools/gen-icon.mjs",
     "prerelease": "node tools/gen-icon.mjs",
-    "start": "aiot start",
-    "build": "aiot build",
     "release": "aiot release"
   },
   "devDependencies": {
