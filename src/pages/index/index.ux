@@ -1,35 +1,67 @@
 <template>
-  <div class="screen">
-    <div class="hud">
-      <text class="hud-score">{{ score }}</text>
-      <text class="hud-info" onclick="onSwitchTheme">{{ infoText }}</text>
+  <stack class="screen">
+    <div
+      class="touch-zone"
+      ontouchstart="onScreenHoldStart"
+      ontouchend="onScreenHoldEnd"
+      ontouchcancel="onScreenHoldEnd"
+    >
+      <stack class="viewport">
+        <chart
+          class="track-chart"
+          type="line"
+          options="{{ lineOpts }}"
+          datasets="{{ lineData }}"
+        ></chart>
+
+        <div class="sprite-layer">
+          <div class="gem-node" style="left: {{ gemX }}px; top: {{ gemY }}px;"></div>
+          <div
+            class="bike-wheel"
+            style="left: {{ rx }}px; top: {{ ry }}px; border-color: {{ trackColor }};"
+          ></div>
+          <div
+            class="bike-wheel"
+            style="left: {{ fx }}px; top: {{ fy }}px; border-color: {{ trackColor }};"
+          ></div>
+          <div
+            class="bike-core"
+            style="left: {{ cx }}px; top: {{ cy }}px; background-color: {{ bikeColor }};"
+          ></div>
+          <div class="bike-visor" style="left: {{ vxVisor }}px; top: {{ vyVisor }}px;"></div>
+        </div>
+      </stack>
     </div>
 
-    <stack class="viewport">
-      <chart
-        class="track-chart"
-        type="line"
-        options="{{ lineOpts }}"
-        datasets="{{ lineData }}"
-      ></chart>
-
-      <div class="sprite-layer">
-        <div class="gem-node" style="left: {{ gemX }}px; top: {{ gemY }}px;"></div>
-        <div class="bike-wheel" style="left: {{ rx }}px; top: {{ ry }}px;"></div>
-        <div class="bike-wheel" style="left: {{ fx }}px; top: {{ fy }}px;"></div>
-        <div class="bike-core" style="left: {{ cx }}px; top: {{ cy }}px;"></div>
-        <div class="bike-visor" style="left: {{ vxVisor }}px; top: {{ vyVisor }}px;"></div>
+    <div class="hud-top">
+      <div class="hud-row">
+        <div class="hud-spacer"></div>
+        <text class="hud-score">{{ score }}</text>
+        <text class="cfg-btn" onclick="onOpenSettings">⚙</text>
       </div>
-    </stack>
+      <text class="hud-info" style="color: {{ trackColor }};">{{ infoText }}</text>
+    </div>
 
-    <text
-      class="deck-btn"
-      ontouchstart="onHoldStart"
-      ontouchend="onHoldEnd"
-      ontouchcancel="onHoldEnd"
-      onclick="onDeckTap"
-    >{{ btnText }}</text>
-  </div>
+    <text class="fps-counter">{{ fpsText }}</text>
+
+    <div class="overlay-screen" if="{{ showCrash }}">
+      <text class="crash-title">{{ crashTitle }}</text>
+      <text class="crash-stat">СЧЕТ: {{ score }}</text>
+      <text class="crash-best">РЕКОРД: {{ bestScore }}   ◆ {{ gems }}</text>
+      <text class="retry-btn" onclick="onRetryTap">ПОВТОРИТЬ</text>
+      <text class="sub-btn" onclick="onOpenSettings">НАСТРОЙКИ</text>
+    </div>
+
+    <div class="overlay-screen" if="{{ showSettings }}">
+      <text class="cfg-title">НАСТРОЙКИ</text>
+      <text class="cfg-item" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
+      <text class="cfg-item" onclick="onCycleFpsMode">ЧАСТОТА: {{ fpsModeLabel }}</text>
+      <text class="cfg-item" onclick="onToggleFill">ТРАССА: {{ fillLabel }}</text>
+      <text class="cfg-item" onclick="onToggleSpin">САЛЬТО: {{ spinLabel }}</text>
+      <text class="cfg-item-warn" onclick="onResetBest">СБРОС РЕКОРДА</text>
+      <text class="retry-btn" onclick="onCloseSettings">ИГРАТЬ</text>
+    </div>
+  </stack>
 </template>
 
 <script>
@@ -41,51 +73,69 @@ import { createGameEngine } from '../../common/engine.js'
 let engineInstance = null
 let loopTimer = null
 let lastTickMs = 0
+let fpsFrameCount = 0
+let fpsWindowStartMs = 0
 
 export default {
   private: {
     score: 0,
     bestScore: 0,
     gems: 0,
-    infoText: 'BEST 0  ◆ 0',
-    btnText: 'HOLD TO RIDE',
+    infoText: 'TAP & HOLD SCREEN',
+    fpsText: '60 FPS',
+    trackColor: '#00F0FF',
+    bikeColor: '#FF006E',
     isHolding: false,
-    rx: 32,
-    ry: 164,
-    cx: 42,
-    cy: 164,
-    fx: 52,
-    fy: 164,
-    vxVisor: 42,
-    vyVisor: 155,
+    showCrash: false,
+    showSettings: false,
+    crashTitle: 'РАЗБИЛСЯ!',
+    vibroEnabled: true,
+    vibroLabel: 'ВКЛ',
+    fpsTargetMode: 0,
+    fpsModeLabel: '60 ГЦ',
+    fillEnabled: false,
+    fillLabel: 'ЛИНИЯ',
+    turboSpin: false,
+    spinLabel: 'НОРМ',
+    rx: 39,
+    ry: 240,
+    cx: 50,
+    cy: 240,
+    fx: 61,
+    fy: 240,
+    vxVisor: 50,
+    vyVisor: 231,
     gemX: -30,
     gemY: -30,
     lineOpts: {
       xAxis: {
         min: 0,
-        max: 15,
-        axisTick: 15,
+        max: 20,
+        axisTick: 20,
         display: false
       },
       yAxis: {
         min: 0,
-        max: 240,
-        axisTick: 8,
+        max: 480,
+        axisTick: 10,
         display: false
       },
       series: {
         lineStyle: {
           width: '4px',
-          smooth: true
+          smooth: false
         }
       }
     },
     lineData: [
       {
         strokeColor: '#00F0FF',
-        fillColor: '#052636',
-        gradient: true,
-        data: [70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70]
+        fillColor: '#042230',
+        gradient: false,
+        data: [
+          230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230,
+          230, 230, 230, 230, 230, 230, 230
+        ]
       }
     ]
   },
@@ -122,7 +172,7 @@ export default {
   loadSavedData() {
     try {
       storage.get({
-        key: 'rider_band10_save',
+        key: 'rider_band10_v2',
         success: (data) => {
           if (data) {
             try {
@@ -135,7 +185,29 @@ export default {
                 this.gems = parsed.gems
                 engineInstance.state.gems = parsed.gems
               }
-              this.updateHudInfo(engineInstance.getRenderSnapshot())
+              if (typeof parsed.vibro === 'boolean') {
+                this.vibroEnabled = parsed.vibro
+                this.vibroLabel = parsed.vibro ? 'ВКЛ' : 'ВЫКЛ'
+              }
+              if (typeof parsed.fpsMode === 'number') {
+                this.fpsTargetMode = parsed.fpsMode
+                this.fpsModeLabel =
+                  parsed.fpsMode === 0
+                    ? '60 ГЦ'
+                    : parsed.fpsMode === 1
+                    ? '45 ГЦ'
+                    : '30 ГЦ'
+              }
+              if (typeof parsed.fill === 'boolean') {
+                this.fillEnabled = parsed.fill
+                this.fillLabel = parsed.fill ? 'ГРАД' : 'ЛИНИЯ'
+              }
+              if (typeof parsed.turbo === 'boolean') {
+                this.turboSpin = parsed.turbo
+                this.spinLabel = parsed.turbo ? 'ТУРБО' : 'НОРМ'
+                engineInstance.state.turboFlip = parsed.turbo
+              }
+              this.syncView(engineInstance.getRenderSnapshot(), true)
             } catch (e) {}
           }
         }
@@ -146,16 +218,21 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'rider_band10_save',
+        key: 'rider_band10_v2',
         value: JSON.stringify({
           best: this.bestScore,
-          gems: this.gems
+          gems: this.gems,
+          vibro: this.vibroEnabled,
+          fpsMode: this.fpsTargetMode,
+          fill: this.fillEnabled,
+          turbo: this.turboSpin
         })
       })
     } catch (e) {}
   },
 
   pulseHaptic(mode) {
+    if (!this.vibroEnabled) return
     try {
       if (vibrator && typeof vibrator.vibrate === 'function') {
         vibrator.vibrate({ mode: mode || 'short' })
@@ -163,16 +240,38 @@ export default {
     } catch (e) {}
   },
 
+  getLoopDelay() {
+    if (this.fpsTargetMode === 0) return 20
+    if (this.fpsTargetMode === 1) return 26
+    return 34
+  },
+
   startLoop() {
     this.stopLoop()
-    lastTickMs = Date.now()
+    const nowInit = Date.now()
+    lastTickMs = nowInit
+    fpsWindowStartMs = nowInit
+    fpsFrameCount = 0
+
     const tick = () => {
       if (!engineInstance) return
       const now = Date.now()
       const dt = (now - lastTickMs) * 0.001
       lastTickMs = now
 
-      if (engineInstance.state.status === 'playing') {
+      fpsFrameCount += 1
+      const elapsedFps = now - fpsWindowStartMs
+      if (elapsedFps >= 500) {
+        const currentFps = Math.min(60, Math.round((fpsFrameCount * 1000) / elapsedFps))
+        const nextFpsText = currentFps + ' FPS'
+        if (this.fpsText !== nextFpsText) {
+          this.fpsText = nextFpsText
+        }
+        fpsFrameCount = 0
+        fpsWindowStartMs = now
+      }
+
+      if (!this.showSettings && engineInstance.state.status === 'playing') {
         const res = engineInstance.step(dt, this.isHolding)
         this.syncView(engineInstance.getRenderSnapshot(), false)
 
@@ -180,14 +279,19 @@ export default {
           this.pulseHaptic('short')
         } else if (res.event === 'crash') {
           this.isHolding = false
+          this.showCrash = true
+          this.crashTitle =
+            engineInstance.state.crashReason === 'VOID FALL!'
+              ? 'В ПРОПАСТЬ!'
+              : 'РАЗБИЛСЯ!'
           this.pulseHaptic('long')
           this.saveProgress()
         }
       }
 
-      loopTimer = setTimeout(tick, 36)
+      loopTimer = setTimeout(tick, this.getLoopDelay())
     }
-    loopTimer = setTimeout(tick, 36)
+    loopTimer = setTimeout(tick, this.getLoopDelay())
   },
 
   stopLoop() {
@@ -197,26 +301,20 @@ export default {
     }
   },
 
-  updateHudInfo(snap) {
-    const nextInfo = snap.bannerText
-      ? snap.bannerText
-      : 'BEST ' + snap.bestScore + '  ◆ ' + snap.gems
-    if (this.infoText !== nextInfo) {
-      this.infoText = nextInfo
-    }
-  },
-
   syncView(snap, forceChart) {
     if (forceChart || snap.status === 'playing') {
       this.lineData = [
         {
-          strokeColor: snap.theme.track,
-          fillColor: snap.theme.fill,
-          gradient: true,
+          strokeColor: snap.trackColor,
+          fillColor: snap.fillColor,
+          gradient: this.fillEnabled,
           data: snap.chartData.slice(0)
         }
       ]
     }
+
+    if (this.trackColor !== snap.trackColor) this.trackColor = snap.trackColor
+    if (this.bikeColor !== snap.bikeColor) this.bikeColor = snap.bikeColor
 
     const b = snap.bike
     if (this.rx !== b.rx) this.rx = b.rx
@@ -235,23 +333,16 @@ export default {
     if (this.bestScore !== snap.bestScore) this.bestScore = snap.bestScore
     if (this.gems !== snap.gems) this.gems = snap.gems
 
-    this.updateHudInfo(snap)
-
-    let nextBtn = 'HOLD: GAS / FLIP'
-    if (snap.status === 'menu') {
-      nextBtn = 'START RIDER'
-    } else if (snap.status === 'gameover') {
-      nextBtn = 'CRASH! TAP RETRY'
-    } else if (this.isHolding) {
-      nextBtn = b.onGround ? 'BOOSTING >>' : 'BACKFLIP >>'
-    }
-    if (this.btnText !== nextBtn) {
-      this.btnText = nextBtn
+    const nextInfo = snap.bannerText
+      ? snap.bannerText
+      : 'BEST ' + snap.bestScore + '  ◆ ' + snap.gems
+    if (this.infoText !== nextInfo) {
+      this.infoText = nextInfo
     }
   },
 
-  onHoldStart() {
-    if (!engineInstance) return
+  onScreenHoldStart() {
+    if (!engineInstance || this.showSettings || this.showCrash) return
     if (engineInstance.state.status !== 'playing') {
       engineInstance.startGame()
       lastTickMs = Date.now()
@@ -261,25 +352,79 @@ export default {
     this.isHolding = true
   },
 
-  onHoldEnd() {
+  onScreenHoldEnd() {
     this.isHolding = false
   },
 
-  onDeckTap() {
+  onRetryTap() {
     if (!engineInstance) return
-    if (engineInstance.state.status !== 'playing') {
-      engineInstance.startGame()
-      lastTickMs = Date.now()
-      this.syncView(engineInstance.getRenderSnapshot(), true)
-      this.pulseHaptic('short')
-    }
-  },
-
-  onSwitchTheme() {
-    if (!engineInstance) return
-    engineInstance.cycleTheme()
+    this.showCrash = false
+    this.showSettings = false
+    engineInstance.startGame()
+    lastTickMs = Date.now()
     this.syncView(engineInstance.getRenderSnapshot(), true)
     this.pulseHaptic('short')
+  },
+
+  onOpenSettings() {
+    this.isHolding = false
+    this.showSettings = true
+    this.pulseHaptic('short')
+  },
+
+  onCloseSettings() {
+    this.showSettings = false
+    lastTickMs = Date.now()
+    this.syncView(engineInstance.getRenderSnapshot(), true)
+    this.pulseHaptic('short')
+  },
+
+  onToggleVibro() {
+    this.vibroEnabled = !this.vibroEnabled
+    this.vibroLabel = this.vibroEnabled ? 'ВКЛ' : 'ВЫКЛ'
+    if (this.vibroEnabled) this.pulseHaptic('short')
+    this.saveProgress()
+  },
+
+  onCycleFpsMode() {
+    this.fpsTargetMode = (this.fpsTargetMode + 1) % 3
+    this.fpsModeLabel =
+      this.fpsTargetMode === 0
+        ? '60 ГЦ'
+        : this.fpsTargetMode === 1
+        ? '45 ГЦ'
+        : '30 ГЦ'
+    this.pulseHaptic('short')
+    this.saveProgress()
+  },
+
+  onToggleFill() {
+    this.fillEnabled = !this.fillEnabled
+    this.fillLabel = this.fillEnabled ? 'ГРАД' : 'ЛИНИЯ'
+    this.syncView(engineInstance.getRenderSnapshot(), true)
+    this.pulseHaptic('short')
+    this.saveProgress()
+  },
+
+  onToggleSpin() {
+    this.turboSpin = !this.turboSpin
+    this.spinLabel = this.turboSpin ? 'ТУРБО' : 'НОРМ'
+    if (engineInstance) {
+      engineInstance.state.turboFlip = this.turboSpin
+    }
+    this.pulseHaptic('short')
+    this.saveProgress()
+  },
+
+  onResetBest() {
+    this.bestScore = 0
+    this.gems = 0
+    if (engineInstance) {
+      engineInstance.state.bestScore = 0
+      engineInstance.state.gems = 0
+    }
+    this.pulseHaptic('long')
+    this.saveProgress()
   }
 }
 </script>
@@ -288,45 +433,87 @@ export default {
 .screen {
   width: 212px;
   height: 520px;
-  flex-direction: column;
-  align-items: center;
   background-color: #000000;
 }
 
-.hud {
-  width: 184px;
-  height: 92px;
-  margin-top: 18px;
-  flex-direction: column;
+.touch-zone {
+  width: 212px;
+  height: 520px;
   justify-content: center;
   align-items: center;
 }
 
-.hud-score {
-  font-size: 42px;
-  color: #FFFFFF;
-}
-
-.hud-info {
-  font-size: 16px;
-  color: #00F0FF;
-  margin-top: 4px;
-}
-
 .viewport {
-  width: 210px;
-  height: 240px;
+  width: 200px;
+  height: 480px;
   background-color: #000000;
 }
 
 .track-chart {
-  width: 210px;
-  height: 240px;
+  width: 200px;
+  height: 480px;
 }
 
 .sprite-layer {
-  width: 210px;
-  height: 240px;
+  width: 200px;
+  height: 480px;
+}
+
+.hud-top {
+  position: absolute;
+  left: 14px;
+  top: 16px;
+  width: 184px;
+  height: 76px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hud-row {
+  width: 184px;
+  height: 48px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hud-spacer {
+  width: 34px;
+  height: 34px;
+}
+
+.hud-score {
+  font-size: 38px;
+  color: #FFFFFF;
+}
+
+.cfg-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 17px;
+  border-width: 2px;
+  border-color: #2A3F52;
+  background-color: #08131C;
+  font-size: 18px;
+  color: #00F0FF;
+  text-align: center;
+}
+
+.hud-info {
+  font-size: 15px;
+  color: #00F0FF;
+  margin-top: 2px;
+}
+
+.fps-counter {
+  position: absolute;
+  left: 56px;
+  top: 494px;
+  width: 100px;
+  height: 20px;
+  font-size: 13px;
+  color: #527084;
+  text-align: center;
 }
 
 .bike-wheel {
@@ -344,7 +531,7 @@ export default {
   width: 12px;
   height: 10px;
   border-radius: 5px;
-  background-color: #FF0055;
+  background-color: #FF006E;
 }
 
 .bike-visor {
@@ -363,16 +550,92 @@ export default {
   background-color: #FFD700;
 }
 
-.deck-btn {
-  width: 184px;
-  height: 112px;
-  margin-top: 26px;
-  border-radius: 44px;
+.overlay-screen {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 212px;
+  height: 520px;
+  background-color: #060810;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.crash-title {
+  font-size: 26px;
+  color: #FF0055;
+  margin-bottom: 14px;
+}
+
+.crash-stat {
+  font-size: 24px;
+  color: #FFFFFF;
+  margin-bottom: 6px;
+}
+
+.crash-best {
+  font-size: 15px;
+  color: #00F0FF;
+  margin-bottom: 28px;
+}
+
+.retry-btn {
+  width: 168px;
+  height: 54px;
+  border-radius: 27px;
   border-width: 3px;
   border-color: #00F0FF;
-  background-color: #06151F;
-  font-size: 20px;
+  background-color: #071F2C;
+  font-size: 19px;
   color: #00F0FF;
   text-align: center;
+  margin-top: 8px;
+}
+
+.sub-btn {
+  width: 152px;
+  height: 44px;
+  border-radius: 22px;
+  border-width: 2px;
+  border-color: #384E63;
+  background-color: #0C1620;
+  font-size: 16px;
+  color: #A0B8CC;
+  text-align: center;
+  margin-top: 14px;
+}
+
+.cfg-title {
+  font-size: 22px;
+  color: #00F0FF;
+  margin-bottom: 12px;
+}
+
+.cfg-item {
+  width: 176px;
+  height: 42px;
+  border-radius: 21px;
+  border-width: 2px;
+  border-color: #1F3647;
+  background-color: #0A141E;
+  font-size: 15px;
+  color: #FFFFFF;
+  text-align: center;
+  margin-top: 6px;
+}
+
+.cfg-item-warn {
+  width: 176px;
+  height: 40px;
+  border-radius: 20px;
+  border-width: 2px;
+  border-color: #55162B;
+  background-color: #1A0810;
+  font-size: 14px;
+  color: #FF4477;
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 6px;
 }
 </style>
