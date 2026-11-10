@@ -10,11 +10,7 @@
         <div class="hud-row">
           <div class="hud-spacer"></div>
           <text class="hud-score">{{ score }}</text>
-          <text
-            class="cfg-btn"
-            style="border-color: {{ trackColor }}; color: {{ trackColor }};"
-            onclick="onOpenSettings"
-          >⚙</text>
+          <text class="cfg-btn" onclick="onOpenSettings">⚙</text>
         </div>
         <text class="hud-info" style="color: {{ accentColor }};">{{ infoText }}</text>
       </div>
@@ -49,34 +45,26 @@
       </stack>
 
       <div class="bottom-bar">
-        <text class="fps-counter" style="color: {{ trackColor }};">{{ fpsText }}</text>
+        <text class="fps-counter">{{ fpsText }}</text>
       </div>
     </div>
 
     <div class="overlay-screen" if="{{ showCrash }}">
-      <text class="crash-title" style="color: {{ bikeColor }};">{{ crashTitle }}</text>
+      <text class="crash-title">{{ crashTitle }}</text>
       <text class="crash-stat">СЧЕТ: {{ score }}</text>
-      <text class="crash-best" style="color: {{ accentColor }};">РЕКОРД: {{ bestScore }}   ◆ {{ gems }}</text>
-      <text
-        class="retry-btn"
-        style="border-color: {{ trackColor }}; color: {{ trackColor }};"
-        onclick="onRetryTap"
-      >ПОВТОРИТЬ</text>
+      <text class="crash-best">РЕКОРД: {{ bestScore }}   ◆ {{ gems }}</text>
+      <text class="retry-btn" onclick="onRetryTap">ПОВТОРИТЬ</text>
       <text class="sub-btn" onclick="onOpenSettings">НАСТРОЙКИ</text>
     </div>
 
     <div class="overlay-screen" if="{{ showSettings }}">
-      <text class="cfg-title" style="color: {{ trackColor }};">НАСТРОЙКИ</text>
+      <text class="cfg-title">НАСТРОЙКИ</text>
       <text class="cfg-item" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
       <text class="cfg-item" onclick="onCycleFpsMode">ЧАСТОТА: {{ fpsModeLabel }}</text>
       <text class="cfg-item" onclick="onToggleFill">ТРАССА: {{ fillLabel }}</text>
       <text class="cfg-item" onclick="onToggleSpin">САЛЬТО: {{ spinLabel }}</text>
       <text class="cfg-item-warn" onclick="onResetBest">СБРОС РЕКОРДА</text>
-      <text
-        class="retry-btn"
-        style="border-color: {{ trackColor }}; color: {{ trackColor }};"
-        onclick="onCloseSettings"
-      >ИГРАТЬ</text>
+      <text class="retry-btn" onclick="onCloseSettings">ИГРАТЬ</text>
     </div>
   </stack>
 </template>
@@ -105,8 +93,8 @@ export default {
     score: 0,
     bestScore: 0,
     gems: 0,
-    infoText: 'УДЕРЖИВАЙ ЭКРАН',
-    fpsText: '60 FPS',
+    infoText: 'НАЖМИ ЧТОБЫ НАЧАТЬ',
+    fpsText: 'READY',
     trackColor: '#00F0FF',
     bikeColor: '#FF006E',
     accentColor: '#FFD700',
@@ -167,7 +155,14 @@ export default {
         brightness.setKeepScreenOn({ keepScreenOn: true })
       }
     } catch (e) {}
-    this.startLoop()
+    if (
+      engineInstance &&
+      engineInstance.state.status === 'playing' &&
+      !this.showCrash &&
+      !this.showSettings
+    ) {
+      this.startLoop()
+    }
   },
 
   onHide() {
@@ -187,7 +182,7 @@ export default {
   loadSavedData() {
     try {
       storage.get({
-        key: 'rider_band10_v5',
+        key: 'rider_band10_v6',
         success: (data) => {
           if (data) {
             try {
@@ -233,7 +228,7 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'rider_band10_v5',
+        key: 'rider_band10_v6',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
@@ -256,9 +251,9 @@ export default {
   },
 
   getMinYieldMs() {
-    if (this.fpsTargetMode === 0) return 1
-    if (this.fpsTargetMode === 1) return 8
-    return 16
+    if (this.fpsTargetMode === 0) return 10
+    if (this.fpsTargetMode === 1) return 16
+    return 24
   },
 
   startLoop() {
@@ -269,7 +264,10 @@ export default {
     fpsFrameCount = 0
 
     const tick = () => {
-      if (!engineInstance) return
+      loopTimer = null
+      if (!engineInstance || this.showSettings || this.showCrash) return
+      if (engineInstance.state.status !== 'playing') return
+
       const now = Date.now()
       const dt = (now - lastTickMs) * 0.001
       lastTickMs = now
@@ -286,19 +284,18 @@ export default {
         fpsWindowStartMs = now
       }
 
-      if (!this.showSettings && !this.showCrash && engineInstance.state.status === 'playing') {
-        const res = engineInstance.step(dt, this.isHolding)
-        this.syncView(engineInstance.getRenderSnapshot(), false)
+      const res = engineInstance.step(dt, this.isHolding)
+      this.syncView(engineInstance.getRenderSnapshot(), false)
 
-        if (res.event === 'flip' || res.event === 'gem' || res.event === 'land') {
-          this.pulseHaptic('short')
-        } else if (res.event === 'crash') {
-          this.isHolding = false
-          this.showCrash = true
-          this.crashTitle = engineInstance.state.crashReason || 'РАЗБИЛСЯ!'
-          this.pulseHaptic('long')
-          this.saveProgress()
-        }
+      if (res.event === 'flip' || res.event === 'gem' || res.event === 'land') {
+        this.pulseHaptic('short')
+      } else if (res.event === 'crash') {
+        this.isHolding = false
+        this.showCrash = true
+        this.crashTitle = engineInstance.state.crashReason || 'РАЗБИЛСЯ!'
+        this.pulseHaptic('long')
+        this.saveProgress()
+        return
       }
 
       loopTimer = setTimeout(tick, this.getMinYieldMs())
@@ -355,9 +352,9 @@ export default {
     if (!engineInstance || this.showSettings || this.showCrash) return
     if (engineInstance.state.status !== 'playing') {
       engineInstance.startGame()
-      lastTickMs = Date.now()
       this.syncView(engineInstance.getRenderSnapshot(), true)
       this.pulseHaptic('short')
+      this.startLoop()
     }
     this.isHolding = true
   },
@@ -371,22 +368,25 @@ export default {
     this.showCrash = false
     this.showSettings = false
     engineInstance.startGame()
-    lastTickMs = Date.now()
     this.syncView(engineInstance.getRenderSnapshot(), true)
     this.pulseHaptic('short')
+    this.startLoop()
   },
 
   onOpenSettings() {
     this.isHolding = false
+    this.stopLoop()
     this.showSettings = true
     this.pulseHaptic('short')
   },
 
   onCloseSettings() {
     this.showSettings = false
-    lastTickMs = Date.now()
     this.syncView(engineInstance.getRenderSnapshot(), true)
     this.pulseHaptic('short')
+    if (engineInstance && engineInstance.state.status === 'playing' && !this.showCrash) {
+      this.startLoop()
+    }
   },
 
   onToggleVibro() {
@@ -529,7 +529,7 @@ export default {
   width: 100px;
   height: 20px;
   font-size: 13px;
-  color: #00F0FF;
+  color: #527084;
   text-align: center;
 }
 
