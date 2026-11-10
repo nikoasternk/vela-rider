@@ -10,9 +10,13 @@
         <div class="hud-row">
           <div class="hud-spacer"></div>
           <text class="hud-score">{{ score }}</text>
-          <text class="cfg-btn" onclick="onOpenSettings">⚙</text>
+          <text
+            class="cfg-btn"
+            style="border-color: {{ trackColor }}; color: {{ trackColor }};"
+            onclick="onOpenSettings"
+          >⚙</text>
         </div>
-        <text class="hud-info">{{ infoText }}</text>
+        <text class="hud-info" style="color: {{ accentColor }};">{{ infoText }}</text>
       </div>
 
       <stack class="viewport">
@@ -25,35 +29,54 @@
 
         <div class="sprite-layer">
           <div class="haz-node" style="left: {{ hazX }}px; top: {{ hazY }}px;"></div>
-          <div class="gem-node" style="left: {{ gemX }}px; top: {{ gemY }}px;"></div>
-          <div class="bike-wheel" style="left: {{ rx }}px; top: {{ ry }}px;"></div>
-          <div class="bike-wheel" style="left: {{ fx }}px; top: {{ fy }}px;"></div>
-          <div class="bike-core" style="left: {{ cx }}px; top: {{ cy }}px;"></div>
-          <div class="bike-visor" style="left: {{ vxVisor }}px; top: {{ vyVisor }}px;"></div>
+          <div
+            class="gem-node"
+            style="left: {{ gemX }}px; top: {{ gemY }}px; background-color: {{ accentColor }};"
+          ></div>
+          <div
+            class="bike-wheel"
+            style="left: {{ rx }}px; top: {{ ry }}px; border-color: {{ trackColor }};"
+          ></div>
+          <div
+            class="bike-wheel"
+            style="left: {{ fx }}px; top: {{ fy }}px; border-color: {{ trackColor }};"
+          ></div>
+          <div
+            class="bike-core"
+            style="left: {{ cx }}px; top: {{ cy }}px; background-color: {{ bikeColor }}; border-color: {{ accentColor }};"
+          ></div>
         </div>
       </stack>
 
       <div class="bottom-bar">
-        <text class="fps-counter">{{ fpsText }}</text>
+        <text class="fps-counter" style="color: {{ trackColor }};">{{ fpsText }}</text>
       </div>
     </div>
 
     <div class="overlay-screen" if="{{ showCrash }}">
-      <text class="crash-title">{{ crashTitle }}</text>
+      <text class="crash-title" style="color: {{ bikeColor }};">{{ crashTitle }}</text>
       <text class="crash-stat">СЧЕТ: {{ score }}</text>
-      <text class="crash-best">РЕКОРД: {{ bestScore }}   ◆ {{ gems }}</text>
-      <text class="retry-btn" onclick="onRetryTap">ПОВТОРИТЬ</text>
+      <text class="crash-best" style="color: {{ accentColor }};">РЕКОРД: {{ bestScore }}   ◆ {{ gems }}</text>
+      <text
+        class="retry-btn"
+        style="border-color: {{ trackColor }}; color: {{ trackColor }};"
+        onclick="onRetryTap"
+      >ПОВТОРИТЬ</text>
       <text class="sub-btn" onclick="onOpenSettings">НАСТРОЙКИ</text>
     </div>
 
     <div class="overlay-screen" if="{{ showSettings }}">
-      <text class="cfg-title">НАСТРОЙКИ</text>
+      <text class="cfg-title" style="color: {{ trackColor }};">НАСТРОЙКИ</text>
       <text class="cfg-item" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
       <text class="cfg-item" onclick="onCycleFpsMode">ЧАСТОТА: {{ fpsModeLabel }}</text>
       <text class="cfg-item" onclick="onToggleFill">ТРАССА: {{ fillLabel }}</text>
       <text class="cfg-item" onclick="onToggleSpin">САЛЬТО: {{ spinLabel }}</text>
       <text class="cfg-item-warn" onclick="onResetBest">СБРОС РЕКОРДА</text>
-      <text class="retry-btn" onclick="onCloseSettings">ИГРАТЬ</text>
+      <text
+        class="retry-btn"
+        style="border-color: {{ trackColor }}; color: {{ trackColor }};"
+        onclick="onCloseSettings"
+      >ИГРАТЬ</text>
     </div>
   </stack>
 </template>
@@ -74,10 +97,7 @@ const sharedDataset = {
   strokeColor: '#00F0FF',
   fillColor: '#042230',
   gradient: false,
-  data: [
-    130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-    130, 130
-  ]
+  data: [140, 140, 140, 140, 140, 140, 140, 140, 140, 140, 140]
 }
 
 export default {
@@ -87,6 +107,9 @@ export default {
     gems: 0,
     infoText: 'УДЕРЖИВАЙ ЭКРАН',
     fpsText: '60 FPS',
+    trackColor: '#00F0FF',
+    bikeColor: '#FF006E',
+    accentColor: '#FFD700',
     isHolding: false,
     showCrash: false,
     showSettings: false,
@@ -99,14 +122,12 @@ export default {
     fillLabel: 'ЛИНИЯ',
     turboSpin: false,
     spinLabel: 'НОРМ',
-    rx: 42,
-    ry: 148,
-    cx: 46,
-    cy: 149,
-    fx: 56,
-    fy: 148,
-    vxVisor: 48,
-    vyVisor: 140,
+    rx: 34,
+    ry: 168,
+    cx: 44,
+    cy: 164,
+    fx: 54,
+    fy: 168,
     gemX: -30,
     gemY: -30,
     hazX: -30,
@@ -114,19 +135,19 @@ export default {
     lineOpts: {
       xAxis: {
         min: 0,
-        max: 16,
-        axisTick: 16,
+        max: 10,
+        axisTick: 10,
         display: false
       },
       yAxis: {
         min: 0,
-        max: 280,
-        axisTick: 8,
+        max: 300,
+        axisTick: 6,
         display: false
       },
       series: {
         lineStyle: {
-          width: '4px',
+          width: '3px',
           smooth: false
         }
       }
@@ -166,7 +187,7 @@ export default {
   loadSavedData() {
     try {
       storage.get({
-        key: 'rider_band10_v4',
+        key: 'rider_band10_v5',
         success: (data) => {
           if (data) {
             try {
@@ -212,7 +233,7 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'rider_band10_v4',
+        key: 'rider_band10_v5',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
@@ -235,9 +256,9 @@ export default {
   },
 
   getMinYieldMs() {
-    if (this.fpsTargetMode === 0) return 4
-    if (this.fpsTargetMode === 1) return 10
-    return 18
+    if (this.fpsTargetMode === 0) return 1
+    if (this.fpsTargetMode === 1) return 8
+    return 16
   },
 
   startLoop() {
@@ -301,6 +322,10 @@ export default {
       this.lineData = [sharedDataset]
     }
 
+    if (this.trackColor !== snap.trackColor) this.trackColor = snap.trackColor
+    if (this.bikeColor !== snap.bikeColor) this.bikeColor = snap.bikeColor
+    if (this.accentColor !== snap.accentColor) this.accentColor = snap.accentColor
+
     const b = snap.bike
     if (this.rx !== b.rx) this.rx = b.rx
     if (this.ry !== b.ry) this.ry = b.ry
@@ -308,8 +333,6 @@ export default {
     if (this.cy !== b.cy) this.cy = b.cy
     if (this.fx !== b.fx) this.fx = b.fx
     if (this.fy !== b.fy) this.fy = b.fy
-    if (this.vxVisor !== b.vxVisor) this.vxVisor = b.vxVisor
-    if (this.vyVisor !== b.vyVisor) this.vyVisor = b.vyVisor
 
     if (this.gemX !== snap.gemX) this.gemX = snap.gemX
     if (this.gemY !== snap.gemY) this.gemY = snap.gemY
@@ -434,8 +457,8 @@ export default {
 
 .hud-top {
   width: 184px;
-  height: 82px;
-  margin-top: 14px;
+  height: 78px;
+  margin-top: 12px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -443,7 +466,7 @@ export default {
 
 .hud-row {
   width: 184px;
-  height: 48px;
+  height: 46px;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
@@ -464,7 +487,7 @@ export default {
   height: 34px;
   border-radius: 17px;
   border-width: 2px;
-  border-color: #2A3F52;
+  border-color: #00F0FF;
   background-color: #08131C;
   font-size: 18px;
   color: #00F0FF;
@@ -473,29 +496,29 @@ export default {
 
 .hud-info {
   font-size: 15px;
-  color: #00F0FF;
+  color: #FFD700;
   margin-top: 2px;
 }
 
 .viewport {
-  width: 208px;
-  height: 280px;
+  width: 200px;
+  height: 300px;
   background-color: #000000;
 }
 
 .track-chart {
-  width: 208px;
-  height: 280px;
+  width: 200px;
+  height: 300px;
 }
 
 .sprite-layer {
-  width: 208px;
-  height: 280px;
+  width: 200px;
+  height: 300px;
 }
 
 .bottom-bar {
   width: 212px;
-  height: 120px;
+  height: 96px;
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
@@ -506,7 +529,7 @@ export default {
   width: 100px;
   height: 20px;
   font-size: 13px;
-  color: #527084;
+  color: #00F0FF;
   text-align: center;
 }
 
@@ -525,15 +548,9 @@ export default {
   width: 12px;
   height: 10px;
   border-radius: 5px;
+  border-width: 2px;
+  border-color: #FFD700;
   background-color: #FF006E;
-}
-
-.bike-visor {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 4px;
-  background-color: #FFD700;
 }
 
 .gem-node {
@@ -566,7 +583,7 @@ export default {
 
 .crash-title {
   font-size: 26px;
-  color: #FF0055;
+  color: #FF006E;
   margin-bottom: 14px;
 }
 
@@ -578,7 +595,7 @@ export default {
 
 .crash-best {
   font-size: 15px;
-  color: #00F0FF;
+  color: #FFD700;
   margin-bottom: 28px;
 }
 
