@@ -1,5 +1,5 @@
 {
-  "package": "com.vela.rider.band10",
+  "package": "com.band.rider",
   "name": "Rider",
   "versionName": "1.0.0",
   "versionCode": 1,
@@ -9,6 +9,9 @@
     "watch"
   ],
   "features": [
+    {
+      "name": "system.device"
+    },
     {
       "name": "system.storage"
     },
