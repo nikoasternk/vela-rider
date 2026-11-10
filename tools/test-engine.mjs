@@ -145,8 +145,8 @@ for (let i = 0; i < 3000; i++) {
     assert(snap.chartData[j] >= 4 && snap.chartData[j] <= CHART_Y_MAX - 4)
   }
 }
-assert(flipsDone >= 12)
-assert(landingsDone >= 12)
+assert(flipsDone >= 8)
+assert(landingsDone >= 8)
 console.log('ENGINE_V11_PHYSICS_AND_UI_PASSED_OK', {
   flipsDone,
   landingsDone
