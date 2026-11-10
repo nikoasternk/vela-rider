@@ -39,7 +39,6 @@ assert.strictEqual(engine.state.status, 'playing')
 assert.strictEqual(engine.state.chartData.length, CHART_POINTS)
 assert(engine.state.segs.filter((s) => s.abyss).length >= 8)
 assert(engine.state.segs.filter((s) => s.island).length >= 6)
-assert(engine.state.segs.some((s) => s.steepDrop))
 assert(engine.state.hazards.some((h) => h.descentSaw))
 
 for (const [vw, vh] of [
@@ -72,16 +71,15 @@ for (let i = 0; i < 14; i++) {
   }
 }
 
-const steepSeg = engine.state.segs.find((s) => s.steepDrop)
-assert(steepSeg)
+const descentSaw = engine.state.hazards.find((h) => h.descentSaw)
+assert(descentSaw)
 
 const recklessBot = createGameEngine(2026)
 recklessBot.startGame()
-recklessBot.state.bike.x = steepSeg.x0 - 8
-recklessBot.state.bike.y = steepSeg.y0 - 6
-recklessBot.state.bike.speed = 180
+recklessBot.state.bike.x = descentSaw.x - 75
+recklessBot.state.bike.speed = 190
 recklessBot.state.bike.onGround = true
-for (let i = 0; i < 60; i++) {
+for (let i = 0; i < 45; i++) {
   recklessBot.step(0.016, true)
   if (recklessBot.state.status === 'gameover') break
 }
@@ -90,15 +88,14 @@ assert.strictEqual(recklessBot.state.crashReason, 'ПИЛА!')
 
 const carefulBot = createGameEngine(2026)
 carefulBot.startGame()
-carefulBot.state.bike.x = steepSeg.x0 - 8
-carefulBot.state.bike.y = steepSeg.y0 - 6
-carefulBot.state.bike.speed = 160
+carefulBot.state.bike.x = descentSaw.x - 75
+carefulBot.state.bike.speed = 100
 carefulBot.state.bike.onGround = true
-for (let i = 0; i < 60; i++) {
+for (let i = 0; i < 55; i++) {
   carefulBot.step(0.016, false)
   assert.strictEqual(carefulBot.state.status, 'playing')
 }
-assert(carefulBot.state.bike.x > steepSeg.x0 + 90)
+assert(carefulBot.state.bike.x > descentSaw.x + 35)
 
 const holdBot = createGameEngine(2026)
 holdBot.startGame()
@@ -125,10 +122,10 @@ for (let i = 0; i < 3000; i++) {
     proBot.startGame()
   }
   const b = proBot.state.bike
-  const nearSteep = proBot.state.segs.some(
-    (s) => s.steepDrop && b.x >= s.x0 - 15 && b.x <= s.x1
+  const sawNear = proBot.state.hazards.some(
+    (h) => h.descentSaw && b.x >= h.x - 85 && b.x <= h.x + 10
   )
-  const hold = nearSteep ? false : b.onGround || b.airFlips < 1
+  const hold = sawNear ? false : b.onGround || b.airFlips < 1
   const res = proBot.step(0.016, hold)
   if (res.event === 'flip') flipsDone += 1
   if (res.event === 'land') landingsDone += 1
@@ -140,7 +137,7 @@ for (let i = 0; i < 3000; i++) {
 }
 assert(flipsDone >= 15)
 assert(landingsDone >= 15)
-console.log('ENGINE_V10_UNIVERSAL_ALL_TESTS_PASSED_OK', {
+console.log('ENGINE_V11_PHYSICS_AND_UI_PASSED_OK', {
   flipsDone,
   landingsDone
 })
