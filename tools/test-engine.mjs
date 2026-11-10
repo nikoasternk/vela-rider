@@ -28,6 +28,12 @@ assert.strictEqual(engine.state.chartData.length, CHART_POINTS)
 assert(engine.state.loops.length >= 1)
 assert(engine.state.hazards.length >= 1)
 
+engine.state.zoomScale = 0.72
+engine.step(0.016, true)
+const snapFar = engine.getRenderSnapshot()
+assert.strictEqual(snapFar.chartData.length, CHART_POINTS)
+
+engine.state.zoomScale = 1.0
 let prevSpeed = engine.state.bike.speed
 for (let i = 0; i < 18; i++) {
   engine.step(0.016, true)
@@ -77,7 +83,7 @@ for (let i = 0; i < 3000; i++) {
 assert(flipsDone >= 15)
 assert(landingsDone >= 15)
 assert(loopsCompleted >= 1)
-console.log('ENGINE_V7_ALL_TESTS_PASSED_OK', {
+console.log('ENGINE_V8_ALL_TESTS_PASSED_OK', {
   flipsDone,
   landingsDone,
   loopsCompleted
