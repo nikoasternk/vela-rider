@@ -89,9 +89,9 @@ assert.strictEqual(recklessBot.state.crashReason, 'ПИЛА!')
 const carefulBot = createGameEngine(2026)
 carefulBot.startGame()
 carefulBot.state.bike.x = descentSaw.x - 75
-carefulBot.state.bike.speed = 100
+carefulBot.state.bike.speed = 110
 carefulBot.state.bike.onGround = true
-for (let i = 0; i < 55; i++) {
+for (let i = 0; i < 85; i++) {
   carefulBot.step(0.016, false)
   assert.strictEqual(carefulBot.state.status, 'playing')
 }
