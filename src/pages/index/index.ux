@@ -14,7 +14,7 @@
     </div>
 
     <div class="banner-bar">
-      <text class="banner-text" style="color: {{ trackColor }};">{{ bannerText }}</text>
+      <text class="banner-text">{{ bannerText }}</text>
     </div>
 
     <stack
@@ -23,52 +23,55 @@
       ontouchend="onHoldEnd"
       ontouchcancel="onHoldEnd"
     >
-      <div class="terrain-row">
-        <div class="terrain-col" for="{{ (idx, col) in columns }}" tid="id">
-          <div class="sky-slice" style="height: {{ col.skyH }}px;"></div>
-          <div class="haz-slice" style="height: {{ col.hazH }}px;"></div>
-          <div
-            class="surf-slice"
-            style="height: {{ col.surfH }}px; background-color: {{ col.surfColor }};"
-          ></div>
-          <div
-            class="sub-slice"
-            style="height: {{ col.subH }}px; background-color: {{ col.subColor }};"
-          ></div>
-        </div>
-      </div>
-
       <div class="sprite-layer">
-        <div
-          class="gem-node"
-          for="{{ (idx, g) in gemsView }}"
-          tid="id"
-          style="left: {{ g.x }}px; top: {{ g.y }}px; background-color: {{ gemColor }}; border-color: #FFFFFF;"
-        ></div>
+        <div class="seg s0" style="top: {{ y0 }}px;"></div>
+        <div class="seg s1" style="top: {{ y1 }}px;"></div>
+        <div class="seg s2" style="top: {{ y2 }}px;"></div>
+        <div class="seg s3" style="top: {{ y3 }}px;"></div>
+        <div class="seg s4" style="top: {{ y4 }}px;"></div>
+        <div class="seg s5" style="top: {{ y5 }}px;"></div>
+        <div class="seg s6" style="top: {{ y6 }}px;"></div>
+        <div class="seg s7" style="top: {{ y7 }}px;"></div>
+        <div class="seg s8" style="top: {{ y8 }}px;"></div>
+        <div class="seg s9" style="top: {{ y9 }}px;"></div>
+        <div class="seg s10" style="top: {{ y10 }}px;"></div>
+        <div class="seg s11" style="top: {{ y11 }}px;"></div>
+        <div class="seg s12" style="top: {{ y12 }}px;"></div>
+        <div class="seg s13" style="top: {{ y13 }}px;"></div>
+        <div class="seg s14" style="top: {{ y14 }}px;"></div>
+        <div class="seg s15" style="top: {{ y15 }}px;"></div>
+        <div class="seg s16" style="top: {{ y16 }}px;"></div>
+        <div class="seg s17" style="top: {{ y17 }}px;"></div>
+        <div class="seg s18" style="top: {{ y18 }}px;"></div>
+        <div class="seg s19" style="top: {{ y19 }}px;"></div>
+        <div class="seg s20" style="top: {{ y20 }}px;"></div>
+        <div class="seg s21" style="top: {{ y21 }}px;"></div>
+        <div class="seg s22" style="top: {{ y22 }}px;"></div>
+        <div class="seg s23" style="top: {{ y23 }}px;"></div>
+        <div class="seg s24" style="top: {{ y24 }}px;"></div>
+        <div class="seg s25" style="top: {{ y25 }}px;"></div>
+        <div class="seg s26" style="top: {{ y26 }}px;"></div>
+        <div class="seg s27" style="top: {{ y27 }}px;"></div>
+        <div class="seg s28" style="top: {{ y28 }}px;"></div>
+        <div class="seg s29" style="top: {{ y29 }}px;"></div>
+        <div class="seg s30" style="top: {{ y30 }}px;"></div>
+        <div class="seg s31" style="top: {{ y31 }}px;"></div>
+        <div class="seg s32" style="top: {{ y32 }}px;"></div>
+        <div class="seg s33" style="top: {{ y33 }}px;"></div>
+        <div class="seg s34" style="top: {{ y34 }}px;"></div>
 
-        <div
-          class="spark-node"
-          for="{{ (idx, p) in particles }}"
-          tid="id"
-          style="left: {{ p.x }}px; top: {{ p.y }}px; background-color: {{ p.color }};"
-        ></div>
+        <div class="haz-node" style="left: {{ hazX }}px; top: {{ hazY }}px;"></div>
+        <div class="gem-node" style="left: {{ gemX }}px; top: {{ gemY }}px;"></div>
 
-        <div
-          class="bike-wheel"
-          style="left: {{ rx }}px; top: {{ ry }}px; border-color: {{ wheelColor }};"
-        ></div>
-        <div
-          class="bike-wheel"
-          style="left: {{ fx }}px; top: {{ fy }}px; border-color: {{ wheelColor }};"
-        ></div>
-        <div
-          class="bike-core"
-          style="left: {{ cx }}px; top: {{ cy }}px; background-color: {{ bikeColor }}; border-color: {{ bikeColor }};"
-        ></div>
-        <div
-          class="bike-visor"
-          style="left: {{ hx }}px; top: {{ hy }}px; background-color: {{ visorColor }}; border-color: {{ bikeColor }};"
-        ></div>
+        <div class="spark-node" style="left: {{ p0x }}px; top: {{ p0y }}px;"></div>
+        <div class="spark-node" style="left: {{ p1x }}px; top: {{ p1y }}px;"></div>
+
+        <div class="bike-wheel" style="left: {{ rx }}px; top: {{ ry }}px;"></div>
+        <div class="bike-wheel" style="left: {{ fx }}px; top: {{ fy }}px;"></div>
+        <div class="bike-link" style="left: {{ r2x }}px; top: {{ r2y }}px;"></div>
+        <div class="bike-link" style="left: {{ f2x }}px; top: {{ f2y }}px;"></div>
+        <div class="bike-core" style="left: {{ cx }}px; top: {{ cy }}px;"></div>
+        <div class="bike-visor" style="left: {{ vxVisor }}px; top: {{ vyVisor }}px;"></div>
       </div>
     </stack>
 
@@ -79,11 +82,8 @@
       ontouchcancel="onHoldEnd"
       onclick="onDeckTap"
     >
-      <div
-        class="deck-btn"
-        style="border-color: {{ isHolding ? bikeColor : trackColor }}; background-color: {{ isHolding ? '#160712' : '#06151F' }};"
-      >
-        <text class="deck-title" style="color: {{ isHolding ? bikeColor : trackColor }};">{{ deckMainLabel }}</text>
+      <div class="deck-btn">
+        <text class="deck-title">{{ deckMainLabel }}</text>
         <text class="deck-sub">{{ deckSubLabel }}</text>
       </div>
     </div>
@@ -94,47 +94,82 @@
 import storage from '@system.storage'
 import vibrator from '@system.vibrator'
 import brightness from '@system.brightness'
-import { createGameEngine, THEMES } from '../../common/engine.js'
+import { createGameEngine } from '../../common/engine.js'
 
 let engineInstance = null
+let rafTimer = null
+let lastTickMs = 0
 
 export default {
   private: {
-    status: 'menu',
     score: 0,
     bestScore: 0,
     gems: 0,
     themeName: 'CYBER',
-    trackColor: '#00F0FF',
-    bikeColor: '#FF0055',
-    wheelColor: '#00F0FF',
-    visorColor: '#FFFFFF',
-    gemColor: '#FFD700',
     bannerText: 'HOLD TO RIDE',
     deckMainLabel: 'START RIDER',
     deckSubLabel: 'HOLD: GAS / AIR FLIP',
     isHolding: false,
+    y0: 190,
+    y1: 190,
+    y2: 190,
+    y3: 190,
+    y4: 190,
+    y5: 190,
+    y6: 190,
+    y7: 190,
+    y8: 190,
+    y9: 190,
+    y10: 190,
+    y11: 190,
+    y12: 190,
+    y13: 190,
+    y14: 190,
+    y15: 190,
+    y16: 190,
+    y17: 190,
+    y18: 190,
+    y19: 190,
+    y20: 190,
+    y21: 190,
+    y22: 190,
+    y23: 190,
+    y24: 190,
+    y25: 190,
+    y26: 190,
+    y27: 190,
+    y28: 190,
+    y29: 190,
+    y30: 190,
+    y31: 190,
+    y32: 190,
+    y33: 190,
+    y34: 190,
     rx: 38,
     ry: 184,
+    r2x: 43,
+    r2y: 184,
+    cx: 48,
+    cy: 184,
+    f2x: 53,
+    f2y: 184,
     fx: 58,
     fy: 184,
-    cx: 48,
-    cy: 182,
-    hx: 48,
-    hy: 174,
-    columns: [],
-    particles: [],
-    gemsView: [],
-    loopTimer: null
+    vxVisor: 48,
+    vyVisor: 175,
+    gemX: -30,
+    gemY: -30,
+    hazX: -30,
+    hazY: -30,
+    p0x: -30,
+    p0y: -30,
+    p1x: -30,
+    p1y: -30
   },
 
   onInit() {
     engineInstance = createGameEngine(Date.now() & 0xffffffff)
-    const snap = engineInstance.getRenderSnapshot()
-    this.columns = snap.columns
-    this.particles = snap.particles
-    this.gemsView = snap.gemsView
-    this.syncView(snap)
+    this.syncView(engineInstance.getRenderSnapshot())
     this.loadSavedData()
   },
 
@@ -206,11 +241,15 @@ export default {
 
   startLoop() {
     this.stopLoop()
-    this.loopTimer = setInterval(() => {
+    lastTickMs = Date.now()
+    const tick = () => {
       if (!engineInstance) return
-      const res = engineInstance.step(0.033, this.isHolding)
-      const snap = engineInstance.getRenderSnapshot()
-      this.syncView(snap)
+      const now = Date.now()
+      const dt = (now - lastTickMs) * 0.001
+      lastTickMs = now
+
+      const res = engineInstance.step(dt, this.isHolding)
+      this.syncView(engineInstance.getRenderSnapshot())
 
       if (res.event === 'flip' || res.event === 'gem' || res.event === 'land') {
         this.pulseHaptic('short')
@@ -219,54 +258,107 @@ export default {
         this.pulseHaptic('long')
         this.saveProgress()
       }
-    }, 33)
+
+      rafTimer = setTimeout(tick, 16)
+    }
+    rafTimer = setTimeout(tick, 16)
   },
 
   stopLoop() {
-    if (this.loopTimer !== null) {
-      clearInterval(this.loopTimer)
-      this.loopTimer = null
+    if (rafTimer !== null) {
+      clearTimeout(rafTimer)
+      rafTimer = null
     }
   },
 
   syncView(snap) {
-    this.status = snap.status
-    this.score = snap.score
-    this.bestScore = snap.bestScore
-    this.gems = snap.gems
-    this.bannerText = snap.bannerText
-    this.themeName = snap.theme.name
-    this.trackColor = snap.theme.track
-    this.bikeColor = snap.theme.bike
-    this.wheelColor = snap.theme.wheel
-    this.visorColor = snap.theme.visor
-    this.gemColor = snap.theme.gem
+    const sy = snap.sliceY
+    if (this.y0 !== sy[0]) this.y0 = sy[0]
+    if (this.y1 !== sy[1]) this.y1 = sy[1]
+    if (this.y2 !== sy[2]) this.y2 = sy[2]
+    if (this.y3 !== sy[3]) this.y3 = sy[3]
+    if (this.y4 !== sy[4]) this.y4 = sy[4]
+    if (this.y5 !== sy[5]) this.y5 = sy[5]
+    if (this.y6 !== sy[6]) this.y6 = sy[6]
+    if (this.y7 !== sy[7]) this.y7 = sy[7]
+    if (this.y8 !== sy[8]) this.y8 = sy[8]
+    if (this.y9 !== sy[9]) this.y9 = sy[9]
+    if (this.y10 !== sy[10]) this.y10 = sy[10]
+    if (this.y11 !== sy[11]) this.y11 = sy[11]
+    if (this.y12 !== sy[12]) this.y12 = sy[12]
+    if (this.y13 !== sy[13]) this.y13 = sy[13]
+    if (this.y14 !== sy[14]) this.y14 = sy[14]
+    if (this.y15 !== sy[15]) this.y15 = sy[15]
+    if (this.y16 !== sy[16]) this.y16 = sy[16]
+    if (this.y17 !== sy[17]) this.y17 = sy[17]
+    if (this.y18 !== sy[18]) this.y18 = sy[18]
+    if (this.y19 !== sy[19]) this.y19 = sy[19]
+    if (this.y20 !== sy[20]) this.y20 = sy[20]
+    if (this.y21 !== sy[21]) this.y21 = sy[21]
+    if (this.y22 !== sy[22]) this.y22 = sy[22]
+    if (this.y23 !== sy[23]) this.y23 = sy[23]
+    if (this.y24 !== sy[24]) this.y24 = sy[24]
+    if (this.y25 !== sy[25]) this.y25 = sy[25]
+    if (this.y26 !== sy[26]) this.y26 = sy[26]
+    if (this.y27 !== sy[27]) this.y27 = sy[27]
+    if (this.y28 !== sy[28]) this.y28 = sy[28]
+    if (this.y29 !== sy[29]) this.y29 = sy[29]
+    if (this.y30 !== sy[30]) this.y30 = sy[30]
+    if (this.y31 !== sy[31]) this.y31 = sy[31]
+    if (this.y32 !== sy[32]) this.y32 = sy[32]
+    if (this.y33 !== sy[33]) this.y33 = sy[33]
+    if (this.y34 !== sy[34]) this.y34 = sy[34]
 
-    this.rx = snap.bike.rx
-    this.ry = snap.bike.ry
-    this.fx = snap.bike.fx
-    this.fy = snap.bike.fy
-    this.cx = snap.bike.cx
-    this.cy = snap.bike.cy
-    this.hx = snap.bike.hx
-    this.hy = snap.bike.hy
+    const b = snap.bike
+    if (this.rx !== b.rx) this.rx = b.rx
+    if (this.ry !== b.ry) this.ry = b.ry
+    if (this.r2x !== b.r2x) this.r2x = b.r2x
+    if (this.r2y !== b.r2y) this.r2y = b.r2y
+    if (this.cx !== b.cx) this.cx = b.cx
+    if (this.cy !== b.cy) this.cy = b.cy
+    if (this.f2x !== b.f2x) this.f2x = b.f2x
+    if (this.f2y !== b.f2y) this.f2y = b.f2y
+    if (this.fx !== b.fx) this.fx = b.fx
+    if (this.fy !== b.fy) this.fy = b.fy
+    if (this.vxVisor !== b.vxVisor) this.vxVisor = b.vxVisor
+    if (this.vyVisor !== b.vyVisor) this.vyVisor = b.vyVisor
 
+    if (this.gemX !== snap.gemX) this.gemX = snap.gemX
+    if (this.gemY !== snap.gemY) this.gemY = snap.gemY
+    if (this.hazX !== snap.hazX) this.hazX = snap.hazX
+    if (this.hazY !== snap.hazY) this.hazY = snap.hazY
+    if (this.p0x !== snap.p0x) this.p0x = snap.p0x
+    if (this.p0y !== snap.p0y) this.p0y = snap.p0y
+    if (this.p1x !== snap.p1x) this.p1x = snap.p1x
+    if (this.p1y !== snap.p1y) this.p1y = snap.p1y
+
+    if (this.score !== snap.score) this.score = snap.score
+    if (this.bestScore !== snap.bestScore) this.bestScore = snap.bestScore
+    if (this.gems !== snap.gems) this.gems = snap.gems
+    if (this.bannerText !== snap.bannerText) this.bannerText = snap.bannerText
+
+    let nextMain = 'HOLD DECK'
+    let nextSub = 'GAS + AIR FLIP'
     if (snap.status === 'menu') {
-      this.deckMainLabel = 'START RIDER'
-      this.deckSubLabel = 'HOLD: GAS / AIR FLIP'
+      nextMain = 'START RIDER'
+      nextSub = 'HOLD: GAS / AIR FLIP'
     } else if (snap.status === 'gameover') {
-      this.deckMainLabel = 'TAP TO RETRY'
-      this.deckSubLabel = 'SCORE ' + snap.score + '  BEST ' + snap.bestScore
-    } else {
-      this.deckMainLabel = this.isHolding ? 'THRUST + FLIP' : 'HOLD DECK'
-      this.deckSubLabel = snap.bike.onGround ? 'GROUND DRIVE' : 'AIR SPIN ACTIVE'
+      nextMain = 'TAP TO RETRY'
+      nextSub = 'CRASHED! TAP DECK'
+    } else if (this.isHolding) {
+      nextMain = 'BOOST + SPIN'
+      nextSub = b.onGround ? 'ACCELERATING' : 'BACKFLIPPING'
     }
+
+    if (this.deckMainLabel !== nextMain) this.deckMainLabel = nextMain
+    if (this.deckSubLabel !== nextSub) this.deckSubLabel = nextSub
   },
 
   onHoldStart() {
     if (!engineInstance) return
     if (engineInstance.state.status !== 'playing') {
       engineInstance.startGame()
+      lastTickMs = Date.now()
       this.pulseHaptic('short')
     }
     this.isHolding = true
@@ -280,6 +372,7 @@ export default {
     if (!engineInstance) return
     if (engineInstance.state.status !== 'playing') {
       engineInstance.startGame()
+      lastTickMs = Date.now()
       this.pulseHaptic('short')
     }
   },
@@ -287,9 +380,9 @@ export default {
   onSwitchTheme() {
     if (!engineInstance) return
     const nextTheme = engineInstance.cycleTheme()
-    const snap = engineInstance.getRenderSnapshot()
-    this.syncView(snap)
-    this.themeName = nextTheme.name
+    if (this.themeName !== nextTheme.name) {
+      this.themeName = nextTheme.name
+    }
     this.pulseHaptic('short')
   }
 }
@@ -306,7 +399,7 @@ export default {
 
 .hud {
   width: 184px;
-  height: 78px;
+  height: 76px;
   margin-top: 14px;
   flex-direction: column;
   justify-content: space-between;
@@ -314,19 +407,19 @@ export default {
 
 .hud-top {
   width: 184px;
-  height: 24px;
+  height: 22px;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
 }
 
 .hud-best {
-  font-size: 16px;
+  font-size: 15px;
   color: #8899AA;
 }
 
 .hud-gems {
-  font-size: 16px;
+  font-size: 15px;
   color: #FFD700;
 }
 
@@ -339,82 +432,92 @@ export default {
 }
 
 .hud-score {
-  font-size: 38px;
+  font-size: 36px;
   color: #FFFFFF;
 }
 
 .theme-chip {
-  width: 68px;
-  height: 30px;
-  border-radius: 15px;
+  width: 66px;
+  height: 28px;
+  border-radius: 14px;
   border-width: 2px;
-  border-color: #263849;
-  background-color: #0A121C;
+  border-color: #00F0FF;
+  background-color: #06151F;
   justify-content: center;
   align-items: center;
 }
 
 .theme-text {
-  font-size: 14px;
+  font-size: 13px;
   color: #00F0FF;
 }
 
 .banner-bar {
   width: 200px;
-  height: 26px;
+  height: 24px;
   justify-content: center;
   align-items: center;
 }
 
 .banner-text {
-  font-size: 18px;
+  font-size: 16px;
   color: #00F0FF;
 }
 
 .viewport {
   width: 210px;
-  height: 300px;
+  height: 290px;
   background-color: #000000;
-}
-
-.terrain-row {
-  width: 210px;
-  height: 300px;
-  flex-direction: row;
-}
-
-.terrain-col {
-  width: 10px;
-  height: 300px;
-  flex-direction: column;
-}
-
-.sky-slice {
-  width: 10px;
-  background-color: #000000;
-}
-
-.haz-slice {
-  width: 10px;
-  background-color: #FF1744;
-  border-radius: 2px;
-  border-width: 1px;
-  border-color: #FFFFFF;
-}
-
-.surf-slice {
-  width: 10px;
-  border-radius: 2px;
-}
-
-.sub-slice {
-  width: 10px;
 }
 
 .sprite-layer {
   width: 210px;
-  height: 300px;
+  height: 290px;
 }
+
+.seg {
+  position: absolute;
+  width: 9px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: #00F0FF;
+}
+
+.s0 { left: 0px; }
+.s1 { left: 6px; }
+.s2 { left: 12px; }
+.s3 { left: 18px; }
+.s4 { left: 24px; }
+.s5 { left: 30px; }
+.s6 { left: 36px; }
+.s7 { left: 42px; }
+.s8 { left: 48px; }
+.s9 { left: 54px; }
+.s10 { left: 60px; }
+.s11 { left: 66px; }
+.s12 { left: 72px; }
+.s13 { left: 78px; }
+.s14 { left: 84px; }
+.s15 { left: 90px; }
+.s16 { left: 96px; }
+.s17 { left: 102px; }
+.s18 { left: 108px; }
+.s19 { left: 114px; }
+.s20 { left: 120px; }
+.s21 { left: 126px; }
+.s22 { left: 132px; }
+.s23 { left: 138px; }
+.s24 { left: 144px; }
+.s25 { left: 150px; }
+.s26 { left: 156px; }
+.s27 { left: 162px; }
+.s28 { left: 168px; }
+.s29 { left: 174px; }
+.s30 { left: 180px; }
+.s31 { left: 186px; }
+.s32 { left: 192px; }
+.s33 { left: 198px; }
+.s34 { left: 203px; }
 
 .bike-wheel {
   position: absolute;
@@ -422,7 +525,16 @@ export default {
   height: 12px;
   border-radius: 6px;
   border-width: 3px;
+  border-color: #00F0FF;
   background-color: #000000;
+}
+
+.bike-link {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: #FF0055;
 }
 
 .bike-core {
@@ -430,7 +542,7 @@ export default {
   width: 10px;
   height: 10px;
   border-radius: 5px;
-  border-width: 2px;
+  background-color: #FF0055;
 }
 
 .bike-visor {
@@ -438,7 +550,7 @@ export default {
   width: 8px;
   height: 8px;
   border-radius: 4px;
-  border-width: 1px;
+  background-color: #FFD700;
 }
 
 .gem-node {
@@ -446,7 +558,15 @@ export default {
   width: 10px;
   height: 10px;
   border-radius: 5px;
-  border-width: 2px;
+  background-color: #FFD700;
+}
+
+.haz-node {
+  position: absolute;
+  width: 10px;
+  height: 16px;
+  border-radius: 3px;
+  background-color: #FF1744;
 }
 
 .spark-node {
@@ -454,27 +574,31 @@ export default {
   width: 6px;
   height: 6px;
   border-radius: 3px;
+  background-color: #00F0FF;
 }
 
 .control-deck {
   width: 212px;
-  height: 102px;
+  height: 110px;
   justify-content: center;
   align-items: center;
 }
 
 .deck-btn {
   width: 184px;
-  height: 76px;
-  border-radius: 38px;
+  height: 80px;
+  border-radius: 40px;
   border-width: 3px;
+  border-color: #00F0FF;
+  background-color: #06151F;
   flex-direction: column;
   justify-content: center;
   align-items: center;
 }
 
 .deck-title {
-  font-size: 20px;
+  font-size: 19px;
+  color: #00F0FF;
 }
 
 .deck-sub {
