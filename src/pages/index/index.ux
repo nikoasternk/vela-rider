@@ -1,56 +1,50 @@
 <template>
   <stack class="screen">
-    <div class="game-layout">
-      <div
-        class="touch-zone"
-        ontouchstart="onScreenHoldStart"
-        ontouchend="onScreenHoldEnd"
-        ontouchcancel="onScreenHoldEnd"
-      >
-        <div class="hud-top">
-          <text class="hud-score">{{ score }}</text>
-          <text class="hud-info">{{ infoText }}</text>
-        </div>
-
-        <stack class="viewport">
-          <chart
-            class="track-chart"
-            type="line"
-            options="{{ lineOpts }}"
-            datasets="{{ lineData }}"
-          ></chart>
-
-          <div class="sprite-layer">
-            <div
-              class="loop-node"
-              style="left: {{ loopX }}px; top: {{ loopY }}px; border-color: {{ trackColor }};"
-            ></div>
-            <div
-              class="saw-node"
-              style="left: {{ hazX }}px; top: {{ hazY }}px; border-color: {{ sawColor }};"
-            ></div>
-            <div
-              class="gem-node"
-              style="left: {{ gemX }}px; top: {{ gemY }}px;"
-            ></div>
-            <div
-              class="bike-wheel"
-              style="left: {{ rx }}px; top: {{ ry }}px; border-color: {{ trackColor }};"
-            ></div>
-            <div
-              class="bike-wheel"
-              style="left: {{ fx }}px; top: {{ fy }}px; border-color: {{ trackColor }};"
-            ></div>
-            <div
-              class="bike-core"
-              style="left: {{ cx }}px; top: {{ cy }}px; border-color: {{ trackColor }};"
-            ></div>
-          </div>
-        </stack>
+    <div
+      class="game-layout"
+      ontouchstart="onScreenHoldStart"
+      ontouchend="onScreenHoldEnd"
+      ontouchcancel="onScreenHoldEnd"
+    >
+      <div class="hud-top">
+        <text class="hud-score">{{ score }}</text>
+        <text class="hud-info">{{ infoText }}</text>
       </div>
 
+      <stack class="viewport">
+        <chart
+          class="track-chart"
+          type="line"
+          options="{{ lineOpts }}"
+          datasets="{{ lineData }}"
+        ></chart>
+
+        <div class="sprite-layer">
+          <div
+            class="saw-node"
+            style="left: {{ hazX }}px; top: {{ hazY }}px;"
+          ></div>
+          <div
+            class="gem-node"
+            style="left: {{ gemX }}px; top: {{ gemY }}px;"
+          ></div>
+          <div
+            class="bike-wheel"
+            style="left: {{ rx }}px; top: {{ ry }}px;"
+          ></div>
+          <div
+            class="bike-wheel"
+            style="left: {{ fx }}px; top: {{ fy }}px;"
+          ></div>
+          <div
+            class="bike-core"
+            style="left: {{ cx }}px; top: {{ cy }}px;"
+          ></div>
+        </div>
+      </stack>
+
       <div class="bottom-bar">
-        <text class="menu-btn" onclick="onOpenSettings">МЕНЮ</text>
+        <text class="menu-btn" if="{{ showMenuBtn }}" onclick="onOpenSettings">МЕНЮ</text>
         <text class="fps-counter" if="{{ showFps }}">{{ fpsText }}</text>
       </div>
     </div>
@@ -65,10 +59,11 @@
 
     <div class="overlay-screen" if="{{ showSettings }}">
       <text class="cfg-title">НАСТРОЙКИ</text>
-      <text class="cfg-item" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
+      <text class="cfg-item" onclick="onCycleZoom">МАСШТАБ: {{ zoomLabel }}</text>
+      <text class="cfg-item" onclick="onCycleDifficulty">СЛОЖНОСТЬ: {{ diffLabel }}</text>
+      <text class="cfg-item" onclick="onCycleObstacles">РЕЖИМ: {{ obsLabel }}</text>
       <text class="cfg-item" onclick="onToggleSpin">ВРАЩЕНИЕ: {{ spinLabel }}</text>
-      <text class="cfg-item" onclick="onToggleCam">КАМЕРА: {{ camLabel }}</text>
-      <text class="cfg-item" onclick="onToggleFps">ПОКАЗ FPS: {{ fpsLabel }}</text>
+      <text class="cfg-item" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}  |  FPS: {{ fpsLabel }}</text>
       <text class="cfg-item-warn" onclick="onResetBest">{{ resetLabel }}</text>
       <text class="retry-btn" onclick="onCloseSettings">ИГРАТЬ</text>
     </div>
@@ -99,11 +94,10 @@ export default {
     score: 0,
     bestScore: 0,
     gems: 0,
-    infoText: 'НАЖМИ ЧТОБЫ НАЧАТЬ',
+    infoText: 'УДЕРЖИВАЙ НИЗ ЭКРАНА',
     fpsText: 'READY',
-    trackColor: '#FF1844',
-    sawColor: '#FF1744',
     isHolding: false,
+    showMenuBtn: true,
     showCrash: false,
     showSettings: false,
     crashTitle: 'РАЗБИЛСЯ!',
@@ -111,8 +105,12 @@ export default {
     vibroLabel: 'ВКЛ',
     turboSpin: false,
     spinLabel: 'НОРМ',
-    farCam: false,
-    camLabel: 'БЛИЗКО',
+    zoomMode: 0,
+    zoomLabel: '100%',
+    difficultyMode: 1,
+    diffLabel: 'НОРМ',
+    obstacleMode: 0,
+    obsLabel: 'ВСЕ',
     showFps: true,
     fpsLabel: 'ВКЛ',
     resetLabel: 'СБРОС РЕКОРДА',
@@ -126,8 +124,6 @@ export default {
     gemY: -40,
     hazX: -50,
     hazY: -50,
-    loopX: -140,
-    loopY: -140,
     lineOpts: {
       xAxis: {
         min: 0,
@@ -187,10 +183,20 @@ export default {
     } catch (e) {}
   },
 
+  applyEngineSettings() {
+    if (!engineInstance) return
+    engineInstance.state.turboFlip = this.turboSpin
+    engineInstance.state.zoomMode = this.zoomMode
+    engineInstance.state.zoomScale =
+      this.zoomMode === 0 ? 1.0 : this.zoomMode === 1 ? 0.72 : 1.28
+    engineInstance.state.difficultyMode = this.difficultyMode
+    engineInstance.state.obstacleMode = this.obstacleMode
+  },
+
   loadSavedData() {
     try {
       storage.get({
-        key: 'rider_band10_v7',
+        key: 'rider_band10_v8',
         success: (data) => {
           if (data) {
             try {
@@ -210,17 +216,35 @@ export default {
               if (typeof parsed.turbo === 'boolean') {
                 this.turboSpin = parsed.turbo
                 this.spinLabel = parsed.turbo ? 'ТУРБО' : 'НОРМ'
-                engineInstance.state.turboFlip = parsed.turbo
               }
-              if (typeof parsed.farCam === 'boolean') {
-                this.farCam = parsed.farCam
-                this.camLabel = parsed.farCam ? 'ДАЛЕКО' : 'БЛИЗКО'
-                engineInstance.state.farCam = parsed.farCam
+              if (typeof parsed.zoom === 'number') {
+                this.zoomMode = parsed.zoom % 3
+                this.zoomLabel =
+                  this.zoomMode === 0 ? '100%' : this.zoomMode === 1 ? '70%' : '130%'
+              }
+              if (typeof parsed.diff === 'number') {
+                this.difficultyMode = parsed.diff % 3
+                this.diffLabel =
+                  this.difficultyMode === 0
+                    ? 'ЛЕГКО'
+                    : this.difficultyMode === 1
+                    ? 'НОРМ'
+                    : 'ХАРД'
+              }
+              if (typeof parsed.obs === 'number') {
+                this.obstacleMode = parsed.obs % 3
+                this.obsLabel =
+                  this.obstacleMode === 0
+                    ? 'ВСЕ'
+                    : this.obstacleMode === 1
+                    ? 'БЕЗ ПИЛ'
+                    : 'ФРИРАЙД'
               }
               if (typeof parsed.showFps === 'boolean') {
                 this.showFps = parsed.showFps
                 this.fpsLabel = parsed.showFps ? 'ВКЛ' : 'ВЫКЛ'
               }
+              this.applyEngineSettings()
               this.syncView(engineInstance.getRenderSnapshot(), true)
             } catch (e) {}
           }
@@ -232,13 +256,15 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'rider_band10_v7',
+        key: 'rider_band10_v8',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
           vibro: this.vibroEnabled,
           turbo: this.turboSpin,
-          farCam: this.farCam,
+          zoom: this.zoomMode,
+          diff: this.difficultyMode,
+          obs: this.obstacleMode,
           showFps: this.showFps
         })
       })
@@ -291,6 +317,7 @@ export default {
         this.pulseHaptic('short')
       } else if (res.event === 'crash') {
         this.isHolding = false
+        this.showMenuBtn = false
         this.showCrash = true
         this.crashTitle = engineInstance.state.crashReason || 'РАЗБИЛСЯ!'
         this.pulseHaptic('long')
@@ -313,13 +340,9 @@ export default {
   syncView(snap, forceChart) {
     if (forceChart || snap.status === 'playing') {
       sharedDataset.strokeColor = snap.trackColor
-      sharedDataset.gradient = false
       sharedDataset.data = snap.chartData
       this.lineData = [sharedDataset]
     }
-
-    if (this.trackColor !== snap.trackColor) this.trackColor = snap.trackColor
-    if (this.sawColor !== snap.sawColor) this.sawColor = snap.sawColor
 
     const b = snap.bike
     if (this.rx !== b.rx) this.rx = b.rx
@@ -333,8 +356,6 @@ export default {
     if (this.gemY !== snap.gemY) this.gemY = snap.gemY
     if (this.hazX !== snap.hazX) this.hazX = snap.hazX
     if (this.hazY !== snap.hazY) this.hazY = snap.hazY
-    if (this.loopX !== snap.loopX) this.loopX = snap.loopX
-    if (this.loopY !== snap.loopY) this.loopY = snap.loopY
 
     if (this.score !== snap.score) this.score = snap.score
     if (this.bestScore !== snap.bestScore) this.bestScore = snap.bestScore
@@ -351,6 +372,8 @@ export default {
   onScreenHoldStart() {
     if (!engineInstance || this.showSettings || this.showCrash) return
     if (engineInstance.state.status !== 'playing') {
+      this.showMenuBtn = false
+      this.applyEngineSettings()
       engineInstance.startGame()
       this.syncView(engineInstance.getRenderSnapshot(), true)
       this.pulseHaptic('short')
@@ -367,6 +390,8 @@ export default {
     if (!engineInstance) return
     this.showCrash = false
     this.showSettings = false
+    this.showMenuBtn = false
+    this.applyEngineSettings()
     engineInstance.startGame()
     this.syncView(engineInstance.getRenderSnapshot(), true)
     this.pulseHaptic('short')
@@ -383,45 +408,74 @@ export default {
 
   onCloseSettings() {
     this.showSettings = false
+    this.showCrash = false
+    this.showMenuBtn = false
+    this.applyEngineSettings()
+    engineInstance.startGame()
     this.syncView(engineInstance.getRenderSnapshot(), true)
     this.pulseHaptic('short')
-    if (engineInstance && engineInstance.state.status === 'playing' && !this.showCrash) {
-      this.startLoop()
-    }
+    this.startLoop()
   },
 
-  onToggleVibro() {
-    this.vibroEnabled = !this.vibroEnabled
-    this.vibroLabel = this.vibroEnabled ? 'ВКЛ' : 'ВЫКЛ'
-    if (this.vibroEnabled) this.pulseHaptic('short')
+  onCycleZoom() {
+    this.zoomMode = (this.zoomMode + 1) % 3
+    this.zoomLabel =
+      this.zoomMode === 0 ? '100%' : this.zoomMode === 1 ? '70%' : '130%'
+    this.applyEngineSettings()
+    this.syncView(engineInstance.getRenderSnapshot(), true)
+    this.pulseHaptic('short')
+    this.saveProgress()
+  },
+
+  onCycleDifficulty() {
+    this.difficultyMode = (this.difficultyMode + 1) % 3
+    this.diffLabel =
+      this.difficultyMode === 0
+        ? 'ЛЕГКО'
+        : this.difficultyMode === 1
+        ? 'НОРМ'
+        : 'ХАРД'
+    this.applyEngineSettings()
+    this.pulseHaptic('short')
+    this.saveProgress()
+  },
+
+  onCycleObstacles() {
+    this.obstacleMode = (this.obstacleMode + 1) % 3
+    this.obsLabel =
+      this.obstacleMode === 0
+        ? 'ВСЕ'
+        : this.obstacleMode === 1
+        ? 'БЕЗ ПИЛ'
+        : 'ФРИРАЙД'
+    this.applyEngineSettings()
+    this.pulseHaptic('short')
     this.saveProgress()
   },
 
   onToggleSpin() {
     this.turboSpin = !this.turboSpin
     this.spinLabel = this.turboSpin ? 'ТУРБО' : 'НОРМ'
-    if (engineInstance) {
-      engineInstance.state.turboFlip = this.turboSpin
-    }
+    this.applyEngineSettings()
     this.pulseHaptic('short')
     this.saveProgress()
   },
 
-  onToggleCam() {
-    this.farCam = !this.farCam
-    this.camLabel = this.farCam ? 'ДАЛЕКО' : 'БЛИЗКО'
-    if (engineInstance) {
-      engineInstance.state.farCam = this.farCam
-      this.syncView(engineInstance.getRenderSnapshot(), true)
+  onToggleVibro() {
+    if (this.vibroEnabled && this.showFps) {
+      this.showFps = false
+    } else if (this.vibroEnabled && !this.showFps) {
+      this.vibroEnabled = false
+      this.showFps = true
+    } else if (!this.vibroEnabled && this.showFps) {
+      this.showFps = false
+    } else {
+      this.vibroEnabled = true
+      this.showFps = true
     }
-    this.pulseHaptic('short')
-    this.saveProgress()
-  },
-
-  onToggleFps() {
-    this.showFps = !this.showFps
+    this.vibroLabel = this.vibroEnabled ? 'ВКЛ' : 'ВЫКЛ'
     this.fpsLabel = this.showFps ? 'ВКЛ' : 'ВЫКЛ'
-    this.pulseHaptic('short')
+    if (this.vibroEnabled) this.pulseHaptic('short')
     this.saveProgress()
   },
 
@@ -453,15 +507,6 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  background-color: #000000;
-}
-
-.touch-zone {
-  width: 212px;
-  height: 410px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
   background-color: #000000;
 }
 
@@ -507,21 +552,22 @@ export default {
   width: 212px;
   height: 108px;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: flex-end;
   align-items: center;
-  padding-top: 8px;
+  padding-bottom: 14px;
 }
 
 .menu-btn {
   width: 136px;
-  height: 40px;
-  border-radius: 20px;
+  height: 38px;
+  border-radius: 19px;
   border-width: 2px;
   border-color: #FFFFFF;
   background-color: #121212;
-  font-size: 16px;
+  font-size: 15px;
   color: #FFFFFF;
   text-align: center;
+  margin-bottom: 8px;
 }
 
 .fps-counter {
@@ -530,24 +576,13 @@ export default {
   font-size: 13px;
   color: #777777;
   text-align: center;
-  margin-top: 8px;
-}
-
-.loop-node {
-  position: absolute;
-  width: 88px;
-  height: 88px;
-  border-radius: 44px;
-  border-width: 3px;
-  border-color: #FF1844;
-  background-color: rgba(0, 0, 0, 0);
 }
 
 .saw-node {
   position: absolute;
-  width: 28px;
-  height: 28px;
-  border-radius: 14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
   border-width: 5px;
   border-color: #FF1744;
   background-color: #2B0008;
@@ -567,7 +602,7 @@ export default {
   height: 12px;
   border-radius: 6px;
   border-width: 3px;
-  border-color: #FF1844;
+  border-color: #FFFFFF;
   background-color: #000000;
 }
 
@@ -577,7 +612,7 @@ export default {
   height: 10px;
   border-radius: 5px;
   border-width: 2px;
-  border-color: #FF1844;
+  border-color: #CCCCCC;
   background-color: #FFFFFF;
 }
 
@@ -613,12 +648,12 @@ export default {
 
 .retry-btn {
   width: 164px;
-  height: 50px;
-  border-radius: 25px;
+  height: 46px;
+  border-radius: 23px;
   border-width: 2px;
   border-color: #FFFFFF;
   background-color: #FFFFFF;
-  font-size: 18px;
+  font-size: 17px;
   color: #000000;
   text-align: center;
   margin-top: 8px;
@@ -626,8 +661,8 @@ export default {
 
 .sub-btn {
   width: 152px;
-  height: 44px;
-  border-radius: 22px;
+  height: 42px;
+  border-radius: 21px;
   border-width: 2px;
   border-color: #666666;
   background-color: #121212;
@@ -638,35 +673,35 @@ export default {
 }
 
 .cfg-title {
-  font-size: 22px;
+  font-size: 20px;
   color: #FFFFFF;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .cfg-item {
-  width: 176px;
-  height: 40px;
-  border-radius: 20px;
+  width: 178px;
+  height: 36px;
+  border-radius: 18px;
   border-width: 2px;
   border-color: #555555;
   background-color: #101010;
-  font-size: 14px;
+  font-size: 13px;
   color: #FFFFFF;
   text-align: center;
-  margin-top: 6px;
+  margin-top: 5px;
 }
 
 .cfg-item-warn {
-  width: 176px;
-  height: 38px;
-  border-radius: 19px;
+  width: 178px;
+  height: 34px;
+  border-radius: 17px;
   border-width: 2px;
   border-color: #444444;
   background-color: #080808;
-  font-size: 14px;
+  font-size: 13px;
   color: #AAAAAA;
   text-align: center;
-  margin-top: 8px;
-  margin-bottom: 4px;
+  margin-top: 6px;
+  margin-bottom: 2px;
 }
 </style>
