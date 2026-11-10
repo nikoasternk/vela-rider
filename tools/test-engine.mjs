@@ -22,9 +22,10 @@ engine.state.bike.onGround = false
 engine.state.bike.y = 80
 engine.state.bike.vy = -120
 engine.state.bike.vx = 140
-for (let i = 0; i < 90; i++) {
+for (let i = 0; i < 35; i++) {
   engine.step(0.016, true)
 }
+assert.strictEqual(engine.state.bike.onGround, false)
 assert(engine.state.bike.airRotation > 3.0)
 
 const snap = engine.getRenderSnapshot()
