@@ -1,0 +1,53 @@
+name: Build Xiaomi Smart Band 10 RPK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-rpk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Generate signing certificates
+        run: |
+          mkdir -p sign/debug sign/release
+          if [ ! -f sign/debug/private.pem ]; then
+            openssl req -newkey rsa:2048 -nodes -keyout sign/debug/private.pem -x509 -days 3650 -out sign/debug/certificate.pem -subj "/C=CN/ST=Beijing/L=Beijing/O=Xiaomi/OU=Vela/CN=com.vela.rider.band10"
+          fi
+          if [ ! -f sign/release/private.pem ]; then
+            cp sign/debug/private.pem sign/release/private.pem
+            cp sign/debug/certificate.pem sign/release/certificate.pem
+          fi
+
+      - name: Generate assets and run physics verification
+        run: npm test
+
+      - name: Build Debug RPK
+        run: npm run build
+
+      - name: Build Release RPK
+        run: npm run release
+
+      - name: Upload RPK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rider-band10-rpk
+          path: dist/*.rpk
+          if-no-files-found: error
