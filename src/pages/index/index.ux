@@ -75,8 +75,8 @@ const sharedDataset = {
   fillColor: '#042230',
   gradient: false,
   data: [
-    120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120,
-    120, 120
+    130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
+    130, 130
   ]
 }
 
@@ -99,14 +99,14 @@ export default {
     fillLabel: 'ЛИНИЯ',
     turboSpin: false,
     spinLabel: 'НОРМ',
-    rx: 41,
-    ry: 140,
-    cx: 52,
-    cy: 140,
-    fx: 63,
-    fy: 140,
-    vxVisor: 52,
-    vyVisor: 131,
+    rx: 42,
+    ry: 148,
+    cx: 46,
+    cy: 149,
+    fx: 56,
+    fy: 148,
+    vxVisor: 48,
+    vyVisor: 140,
     gemX: -30,
     gemY: -30,
     hazX: -30,
@@ -120,7 +120,7 @@ export default {
       },
       yAxis: {
         min: 0,
-        max: 260,
+        max: 280,
         axisTick: 8,
         display: false
       },
@@ -166,7 +166,7 @@ export default {
   loadSavedData() {
     try {
       storage.get({
-        key: 'rider_band10_v3',
+        key: 'rider_band10_v4',
         success: (data) => {
           if (data) {
             try {
@@ -212,7 +212,7 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'rider_band10_v3',
+        key: 'rider_band10_v4',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
@@ -479,23 +479,23 @@ export default {
 
 .viewport {
   width: 208px;
-  height: 260px;
+  height: 280px;
   background-color: #000000;
 }
 
 .track-chart {
   width: 208px;
-  height: 260px;
+  height: 280px;
 }
 
 .sprite-layer {
   width: 208px;
-  height: 260px;
+  height: 280px;
 }
 
 .bottom-bar {
   width: 212px;
-  height: 140px;
+  height: 120px;
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
