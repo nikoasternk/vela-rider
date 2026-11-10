@@ -84,10 +84,11 @@ export function createGameEngine(initialSeed = 20261110) {
     bannerText: 'УДЕРЖИВАЙ ЭКРАН',
     bannerTimer: 0,
     trackColor: RAINBOW_COLORS[0],
-    sawColor: '#FF1744',
     turboFlip: false,
-    farCam: false,
-    camX: 0,
+    zoomMode: 0,
+    zoomScale: 1.0,
+    difficultyMode: 1,
+    obstacleMode: 0,
     camY: 0,
     segs: [],
     loops: [],
@@ -106,8 +107,6 @@ export function createGameEngine(initialSeed = 20261110) {
       angVel: 0,
       onGround: true,
       inLoop: false,
-      activeLoop: null,
-      loopAngle: 0,
       airTime: 0,
       airRotation: 0,
       airFlips: 0,
@@ -122,8 +121,6 @@ export function createGameEngine(initialSeed = 20261110) {
     gemY: -40,
     hazX: -50,
     hazY: -50,
-    loopX: -140,
-    loopY: -140,
     chartData
   }
 
@@ -156,116 +153,99 @@ export function createGameEngine(initialSeed = 20261110) {
     state.lastM = nextM
   }
 
-  function addAbyss(dx, nextY, nextM) {
-    const x0 = state.lastX
-    const y0 = state.lastY
-    const x1 = x0 + dx
-    const lipY = Math.max(y0, nextY)
-    state.segs.push({
-      x0,
-      x1,
-      y0: lipY + 260,
-      y1: lipY + 260,
-      m0: 0,
-      m1: 0,
-      dm: 0,
-      invDx: 1.0 / dx,
-      c1: 0,
-      c2: 0,
-      kicker: false,
-      abyss: true,
-      island: false,
-      lipY
-    })
-    state.lastX = x1
-    state.lastY = nextY
-    state.lastM = nextM
-  }
-
   function appendProceduralChunk() {
     const r = nextRand()
+    const allowAbyss = state.obstacleMode !== 2
+    const allowSaws = state.obstacleMode === 0
 
-    if (r < 0.22) {
-      addSegment(80, 0.55, false, false, 0, false)
-      addSegment(85, 0.0, false, false, 0, false)
-      const loopCX = state.lastX + 48
-      const entryY = state.lastY
-      const loopR = 44
-      const loopCY = entryY - loopR
-      addSegment(105, 0.0, false, false, 0, false)
-      addSegment(80, 0.28, false, false, 0, false)
+    if (r < 0.25) {
+      addSegment(75, 0.55, false, false, 0, false)
+      addSegment(65, 0.0, false, false, 0, false)
+      addSegment(75, -0.68, false, false, 0, false)
+      const bridgeStart = state.lastX
+      const bridgeY = state.lastY
+      addSegment(80, 0.0, false, false, 0, false)
+      addSegment(80, 0.58, false, false, 0, false)
       addSegment(75, 0.0, false, false, 0, false)
       state.loops.push({
-        cx: loopCX,
-        cy: loopCY,
-        r: loopR,
-        entryY,
-        slideOffset: 56,
+        cx: bridgeStart,
+        span: 160,
+        slideOffset: 68,
         switched: false,
         completed: false
       })
       state.worldGems.push({
-        x: loopCX,
-        y: loopCY - loopR + 10,
+        x: bridgeStart + 40,
+        y: bridgeY - 26,
         taken: false
       })
-    } else if (r < 0.46) {
-      addSegment(85, 0.72, false, false, 0, false)
-      addSegment(70, 0.0, false, false, 0, false)
-      addSegment(85, -0.80, true, false, 0, false)
+    } else if (r < 0.52) {
+      addSegment(80, 0.72, false, false, 0, false)
+      addSegment(65, 0.0, false, false, 0, false)
+      addSegment(80, -0.78, true, false, 0, false)
       const lipX = state.lastX
       const lipY = state.lastY
-      addAbyss(62, lipY + 12, -0.35)
-      addSegment(48, 0.0, false, false, 0, true)
-      addSegment(48, -0.68, true, false, 0, true)
-      const islandLipY = state.lastY
-      addAbyss(64, islandLipY + 36, 0.35)
-      addSegment(90, 0.35, false, false, 0, false)
-      addSegment(85, 0.0, false, false, 0, false)
+      addSegment(52, 0.95, false, allowAbyss, lipY, false)
+      addSegment(52, -0.85, false, allowAbyss, lipY, false)
+      addSegment(50, 0.0, false, false, 0, true)
+      addSegment(55, -0.68, true, false, 0, true)
+      const lip2Y = state.lastY
+      addSegment(50, 0.92, false, allowAbyss, lip2Y, false)
+      addSegment(55, 0.0, false, allowAbyss, lip2Y, false)
+      addSegment(85, 0.35, false, false, 0, false)
+      addSegment(75, 0.0, false, false, 0, false)
       state.worldGems.push({
-        x: lipX + 110,
-        y: lipY - 38,
+        x: lipX + 128,
+        y: lipY - 34,
         taken: false
       })
-    } else if (r < 0.70) {
-      addSegment(85, 0.75, false, false, 0, false)
-      addSegment(70, 0.0, false, false, 0, false)
+    } else if (r < 0.78) {
+      addSegment(80, 0.65, false, false, 0, false)
+      addSegment(65, 0.0, false, false, 0, false)
       addSegment(85, -0.82, true, false, 0, false)
       const lipX = state.lastX
       const lipY = state.lastY
-      addAbyss(84, lipY + 44, 0.35)
-      addSegment(90, 0.35, false, false, 0, false)
-      addSegment(85, 0.0, false, false, 0, false)
-      state.hazards.push({
-        x: lipX + 42,
-        y: lipY + 26,
-        r: 14
-      })
+      addSegment(60, 1.15, false, allowAbyss, lipY, false)
+      const pitX = state.lastX
+      const pitY = state.lastY
+      addSegment(60, -0.95, false, allowAbyss, lipY, false)
+      addSegment(80, 0.38, false, false, 0, false)
+      addSegment(80, 0.0, false, false, 0, false)
+      if (allowSaws) {
+        state.hazards.push({
+          x: pitX,
+          y: pitY - 8,
+          r: 14
+        })
+      }
       state.worldGems.push({
-        x: lipX + 42,
+        x: lipX + 60,
         y: lipY - 46,
         taken: false
       })
     } else {
-      addSegment(80, 0.65, false, false, 0, false)
+      addSegment(75, 0.55, false, false, 0, false)
       addSegment(65, 0.0, false, false, 0, false)
-      addSegment(80, -0.78, true, false, 0, false)
+      addSegment(75, -0.75, true, false, 0, false)
       const kickX = state.lastX
       const kickY = state.lastY
-      addSegment(50, 0.75, false, false, 0, false)
-      const sawX = state.lastX
-      const sawY = state.lastY
-      addSegment(50, 0.0, false, false, 0, false)
-      addSegment(85, 0.32, false, false, 0, false)
-      addSegment(80, 0.0, false, false, 0, false)
-      state.hazards.push({
-        x: sawX,
-        y: sawY + 8,
-        r: 14
-      })
+      addSegment(55, 0.78, false, false, 0, false)
+      const dipX = state.lastX
+      const dipY = state.lastY
+      addSegment(55, 0.0, false, false, 0, false)
+      addSegment(80, -0.68, true, false, 0, false)
+      addSegment(80, 0.42, false, false, 0, false)
+      addSegment(75, 0.0, false, false, 0, false)
+      if (allowSaws) {
+        state.hazards.push({
+          x: dipX,
+          y: dipY + 6,
+          r: 14
+        })
+      }
       state.worldGems.push({
-        x: kickX + 50,
-        y: kickY - 42,
+        x: kickX + 55,
+        y: kickY - 40,
         taken: false
       })
     }
@@ -294,16 +274,10 @@ export function createGameEngine(initialSeed = 20261110) {
     let y = sampleTerrainY(wx)
     for (let i = 0; i < state.loops.length; i++) {
       const lp = state.loops[i]
-      const dx = wx - lp.cx
-      if (dx >= -lp.r && dx <= lp.r * 1.5 && lp.slideOffset > 0) {
-        if (dx >= -lp.r * 0.5 && dx <= lp.r * 0.7) {
-          const norm = (dx + lp.r * 0.5) / (lp.r * 1.2)
-          const arcLift = Math.sin(norm * 3.141592653589793) * (lp.r * 1.5)
-          y -= arcLift * (lp.slideOffset / 56)
-        } else if (dx > lp.r * 0.7) {
-          const tail = 1 - (dx - lp.r * 0.7) / (lp.r * 0.8)
-          y -= lp.slideOffset * clamp(tail, 0, 1)
-        }
+      if (lp.slideOffset > 0 && wx >= lp.cx && wx <= lp.cx + lp.span) {
+        const u = (wx - lp.cx) / lp.span
+        const smoothBell = 0.5 * (1 - Math.cos(u * 6.283185307179586))
+        y += lp.slideOffset * smoothBell
       }
     }
     return y
@@ -344,58 +318,54 @@ export function createGameEngine(initialSeed = 20261110) {
     }
   }
 
-  let pulseTick = 0
+  let colorTick = 0
 
-  function updateColors() {
-    state.trackColor = computeRainbowTrackColor(state.bike.x)
-    pulseTick = (pulseTick + 1) % 8
-    state.sawColor = pulseTick < 4 ? '#FF1744' : '#FF5252'
+  function updateColors(force) {
+    colorTick = (colorTick + 1) % 3
+    if (force || colorTick === 0) {
+      state.trackColor = computeRainbowTrackColor(state.bike.x)
+    }
   }
 
   function updateProjections() {
     const b = state.bike
-    const baseOffset = state.farCam ? 34 : BIKE_SCREEN_X
-    const targetCamX =
-      b.inLoop && b.activeLoop ? b.activeLoop.cx - 88 : b.x - baseOffset
+    const scale = state.zoomScale
+    const invScale = 1.0 / scale
+    const worldLeft = b.x - BIKE_SCREEN_X * invScale
+    const worldStep = POINT_STEP * invScale
 
-    if (Math.abs(targetCamX - state.camX) > 90) {
-      state.camX = targetCamX
-    } else {
-      state.camX += (targetCamX - state.camX) * 0.32
-    }
-
-    const worldLeft = state.camX
     const curGround = sampleTerrain(b.x)
     const refGroundY = curGround.abyss ? curGround.lipY : curGround.y
-    const focusY = b.onGround || b.inLoop ? b.y : b.y * 0.72 + refGroundY * 0.28
-    const targetCamY = focusY - 156
-    state.camY += (targetCamY - state.camY) * 0.24
-    const camY = state.camY
+    const focusY = b.onGround ? b.y : b.y * 0.72 + refGroundY * 0.28
+    state.camY += (focusY - state.camY) * 0.24
+    const camCenterY = state.camY
 
     for (let i = 0; i < CHART_POINTS; i++) {
-      const sy = sampleChartY(worldLeft + i * POINT_STEP) - camY
+      const wy = sampleChartY(worldLeft + i * worldStep)
+      const sy = 156 + (wy - camCenterY) * scale
       chartData[i] = clamp(Math.round(VIEW_H - sy), 4, VIEW_H - 4)
     }
 
     const cosA = Math.cos(b.angle)
     const sinA = Math.sin(b.angle)
-    const sx = clamp(b.x - worldLeft, 14, VIEW_W - 14)
-    const sy = clamp(b.y - camY, 12, VIEW_H - 12)
+    const sx = BIKE_SCREEN_X
+    const sy = clamp(156 + (b.y - camCenterY) * scale, 14, VIEW_H - 14)
+    const wheelSpan = 10 * scale
 
-    b.rx = Math.round(sx - cosA * 10 - 6)
-    b.ry = Math.round(sy - sinA * 10 - 6)
-    b.cx = Math.round(sx + sinA * 5 - 6)
-    b.cy = Math.round(sy - cosA * 5 - 5)
-    b.fx = Math.round(sx + cosA * 10 - 6)
-    b.fy = Math.round(sy + sinA * 10 - 6)
+    b.rx = Math.round(sx - cosA * wheelSpan - 6)
+    b.ry = Math.round(sy - sinA * wheelSpan - 6)
+    b.cx = Math.round(sx + sinA * 5 * scale - 6)
+    b.cy = Math.round(sy - cosA * 5 * scale - 5)
+    b.fx = Math.round(sx + cosA * wheelSpan - 6)
+    b.fy = Math.round(sy + sinA * wheelSpan - 6)
 
     let gx = -40
     let gy = -40
     for (let i = 0; i < state.worldGems.length; i++) {
       const g = state.worldGems[i]
       if (!g.taken) {
-        const scX = Math.round(g.x - worldLeft - 5)
-        const scY = Math.round(g.y - camY - 5)
+        const scX = Math.round(sx + (g.x - b.x) * scale - 5)
+        const scY = Math.round(156 + (g.y - camCenterY) * scale - 5)
         if (scX >= -12 && scX <= VIEW_W + 12 && scY >= 4 && scY <= VIEW_H - 10) {
           gx = scX
           gy = scY
@@ -410,9 +380,9 @@ export function createGameEngine(initialSeed = 20261110) {
     let hy = -50
     for (let i = 0; i < state.hazards.length; i++) {
       const h = state.hazards[i]
-      const scX = Math.round(h.x - worldLeft - 14)
-      const scY = Math.round(h.y - camY - 14)
-      if (scX >= -28 && scX <= VIEW_W + 28 && scY >= -20 && scY <= VIEW_H + 10) {
+      const scX = Math.round(sx + (h.x - b.x) * scale - 13)
+      const scY = Math.round(156 + (h.y - camCenterY) * scale - 13)
+      if (scX >= -26 && scX <= VIEW_W + 26 && scY >= -20 && scY <= VIEW_H + 10) {
         hx = scX
         hy = scY
         break
@@ -420,21 +390,6 @@ export function createGameEngine(initialSeed = 20261110) {
     }
     state.hazX = hx
     state.hazY = hy
-
-    let lx = -140
-    let ly = -140
-    for (let i = 0; i < state.loops.length; i++) {
-      const lp = state.loops[i]
-      const scX = Math.round(lp.cx - worldLeft - lp.r)
-      const scY = Math.round(lp.cy - camY - lp.r)
-      if (scX >= -95 && scX <= VIEW_W + 20) {
-        lx = scX
-        ly = scY
-        break
-      }
-    }
-    state.loopX = lx
-    state.loopY = ly
   }
 
   function resetWorld() {
@@ -447,40 +402,43 @@ export function createGameEngine(initialSeed = 20261110) {
     state.lastM = 0
     searchHint = 0
 
+    const allowAbyss = state.obstacleMode !== 2
+    const allowSaws = state.obstacleMode === 0
+
     addSegment(80, 0.0, false, false, 0, false)
     addSegment(85, 0.72, false, false, 0, false)
     addSegment(75, 0.0, false, false, 0, false)
     addSegment(85, -0.78, true, false, 0, false)
     const firstLipX = state.lastX
     const firstLipY = state.lastY
-    addAbyss(100, firstLipY + 48, 0.35)
-    state.hazards.push({
-      x: firstLipX + 50,
-      y: firstLipY + 28,
-      r: 14
-    })
-    addSegment(85, 0.35, false, false, 0, false)
-    addSegment(80, 0.0, false, false, 0, false)
+    addSegment(55, 0.92, false, allowAbyss, firstLipY, false)
+    addSegment(55, 0.0, false, allowAbyss, firstLipY, false)
+    if (allowSaws) {
+      state.hazards.push({
+        x: firstLipX + 55,
+        y: firstLipY + 26,
+        r: 14
+      })
+    }
+    addSegment(80, 0.35, false, false, 0, false)
+    addSegment(75, 0.0, false, false, 0, false)
 
-    const loopCX = state.lastX + 48
-    const entryY = state.lastY
-    const loopR = 44
-    const loopCY = entryY - loopR
-    addSegment(105, 0.0, false, false, 0, false)
-    addSegment(80, 0.28, false, false, 0, false)
+    addSegment(70, -0.62, false, false, 0, false)
+    const bridgeStart = state.lastX
+    const bridgeY = state.lastY
+    addSegment(80, 0.0, false, false, 0, false)
+    addSegment(80, 0.55, false, false, 0, false)
     addSegment(75, 0.0, false, false, 0, false)
     state.loops.push({
-      cx: loopCX,
-      cy: loopCY,
-      r: loopR,
-      entryY,
-      slideOffset: 56,
+      cx: bridgeStart,
+      span: 160,
+      slideOffset: 68,
       switched: false,
       completed: false
     })
     state.worldGems.push({
-      x: loopCX,
-      y: loopCY - loopR + 10,
+      x: bridgeStart + 40,
+      y: bridgeY - 26,
       taken: false
     })
 
@@ -498,14 +456,11 @@ export function createGameEngine(initialSeed = 20261110) {
     state.bike.angVel = 0
     state.bike.onGround = true
     state.bike.inLoop = false
-    state.bike.activeLoop = null
-    state.bike.loopAngle = 0
     state.bike.airTime = 0
     state.bike.airRotation = 0
     state.bike.airFlips = 0
-    state.camX = state.bike.x - (state.farCam ? 34 : BIKE_SCREEN_X)
-    state.camY = state.bike.y - 156
-    updateColors()
+    state.camY = state.bike.y
+    updateColors(true)
     updateProjections()
   }
 
@@ -515,7 +470,6 @@ export function createGameEngine(initialSeed = 20261110) {
     state.bannerText = reason
     state.bannerTimer = 2.0
     state.bike.inLoop = false
-    state.bike.activeLoop = null
     if (state.score > state.bestScore) {
       state.bestScore = state.score
     }
@@ -549,120 +503,82 @@ export function createGameEngine(initialSeed = 20261110) {
       return { event }
     }
 
+    const b = state.bike
+    const gravity = state.difficultyMode === 0 ? 480 : 510
+    const maxSpeed = state.difficultyMode === 2 ? 295 : 275
+    const crashAngleLimit =
+      state.difficultyMode === 0 ? 1.35 : state.difficultyMode === 2 ? 0.96 : 1.12
+
     for (let i = 0; i < state.loops.length; i++) {
       const lp = state.loops[i]
+      if (!lp.switched && b.x >= lp.cx - 55) {
+        lp.switched = true
+        b.inLoop = true
+      }
       if (lp.switched && lp.slideOffset > 0) {
-        lp.slideOffset = Math.max(0, lp.slideOffset - 260 * dt)
+        lp.slideOffset = Math.max(0, lp.slideOffset - 240 * dt)
       }
-    }
-
-    const b = state.bike
-    const gravity = 510
-
-    if (b.inLoop && b.activeLoop) {
-      const lp = b.activeLoop
-      if (isPressing) {
-        b.speed = clamp(b.speed + 250 * dt, 135, 265)
-      } else {
-        b.speed = clamp(b.speed - Math.sin(b.loopAngle) * 150 * dt, 115, 260)
-      }
-      const effR = lp.r - 6
-      const omega = (b.speed / effR) * 1.08
-      b.loopAngle += omega * dt
-      if (b.loopAngle >= 2.1) {
-        lp.switched = true
-      }
-      if (b.loopAngle >= 6.283185307179586) {
-        b.inLoop = false
-        b.activeLoop = null
+      if (!lp.completed && b.x >= lp.cx + 45) {
         lp.completed = true
-        lp.switched = true
-        lp.slideOffset = 0
-        b.x = lp.cx + 16
-        const exitG = sampleTerrain(b.x)
-        b.y = exitG.y - 6
-        b.angle = exitG.angle
-        b.onGround = true
-        b.angVel = 0
-        b.speed = Math.max(b.speed, 195)
+        b.inLoop = false
         state.score += 5
         state.bannerText = 'ПЕТЛЯ +5'
         state.bannerTimer = 0.85
-        event = 'flip'
+        if (!event) event = 'flip'
+      }
+    }
+
+    if (b.onGround) {
+      const cur = sampleTerrain(b.x)
+
+      if (cur.abyss && b.y > cur.lipY + 28) {
+        triggerCrash('В ПРОПАСТЬ!')
+        return { event: 'crash' }
+      }
+
+      if (isPressing) {
+        if (b.speed < 145) {
+          b.speed += 440 * dt
+        }
+        const uphillBoost = cur.angle < 0 ? -Math.sin(cur.angle) * 115 : 0
+        const downhillBoost = cur.angle > 0 ? Math.sin(cur.angle) * 210 : 0
+        b.speed += (270 + uphillBoost + downhillBoost) * dt
       } else {
-        b.x = lp.cx + Math.sin(b.loopAngle) * effR
-        b.y = lp.cy + Math.cos(b.loopAngle) * effR
-        b.angle = normalizeAngle(-b.loopAngle)
-        b.vx = b.speed * Math.cos(b.angle)
-        b.vy = b.speed * Math.sin(b.angle)
-      }
-    } else if (b.onGround) {
-      for (let i = 0; i < state.loops.length; i++) {
-        const lp = state.loops[i]
-        if (!lp.completed && b.x >= lp.cx - 12 && b.x <= lp.cx + 14 && b.speed >= 85) {
-          b.inLoop = true
-          b.activeLoop = lp
-          b.loopAngle = 0
-          b.speed = Math.max(b.speed, 175)
-          break
-        }
+        const slopeGravity = Math.sin(cur.angle) * 260
+        b.speed += slopeGravity * dt
+        b.speed *= 1 - 0.38 * dt
       }
 
-      if (!b.inLoop) {
-        const cur = sampleTerrain(b.x)
+      b.speed = clamp(b.speed, 38, maxSpeed)
 
-        if (cur.abyss && b.y > cur.lipY + 28) {
-          triggerCrash('В ПРОПАСТЬ!')
-          return { event: 'crash' }
-        }
+      const stepDist = b.speed * dt
+      const nextX = b.x + Math.max(1.2, stepDist * Math.cos(cur.angle * 0.65))
+      const next = sampleTerrain(nextX)
+      const angleDrop = next.angle - cur.angle
 
-        if (isPressing) {
-          if (b.speed < 145) {
-            b.speed += 440 * dt
-          }
-          const uphillBoost = cur.angle < 0 ? -Math.sin(cur.angle) * 115 : 0
-          const downhillBoost = cur.angle > 0 ? Math.sin(cur.angle) * 210 : 0
-          b.speed += (270 + uphillBoost + downhillBoost) * dt
-        } else {
-          const slopeGravity = Math.sin(cur.angle) * 260
-          b.speed += slopeGravity * dt
-          b.speed *= 1 - 0.38 * dt
-        }
-
-        b.speed = clamp(b.speed, 38, 275)
-
-        const stepDist = b.speed * dt
-        const nextX = b.x + Math.max(1.2, stepDist * Math.cos(cur.angle * 0.65))
-        const next = sampleTerrain(nextX)
-        const angleDrop = next.angle - cur.angle
-
-        if (
-          (cur.kicker && b.speed > 95) ||
-          (angleDrop > 0.09 && b.speed > 120) ||
-          (next.abyss && !cur.abyss)
-        ) {
-          b.onGround = false
-          b.airTime = 0
-          b.airRotation = 0
-          b.airFlips = 0
-          const launchAngle = clamp(cur.angle, -0.78, -0.32)
-          b.x = nextX
-          const minVx = isPressing || b.speed > 110 ? 135 : 52
-          b.vx = clamp(b.speed * Math.cos(launchAngle), minVx, 225)
-          b.vy =
-            b.speed * Math.sin(launchAngle) -
-            (isPressing || b.speed > 165 ? 38 : 10)
-          b.y = cur.y - 7
-          b.angVel = isPressing ? -2.2 : 0
-        } else {
-          b.x = nextX
-          b.y = next.y - 6
-          b.vx = b.speed * Math.cos(next.angle)
-          b.vy = b.speed * Math.sin(next.angle)
-          const wheelieOffset = isPressing && b.speed > 195 ? -0.14 : 0
-          b.angle = next.angle + wheelieOffset
-          b.angVel = 0
-        }
+      if (
+        (cur.kicker && b.speed > 95) ||
+        (angleDrop > 0.09 && b.speed > 120) ||
+        (next.abyss && !cur.abyss)
+      ) {
+        b.onGround = false
+        b.airTime = 0
+        b.airRotation = 0
+        b.airFlips = 0
+        const launchAngle = clamp(cur.angle, -0.78, -0.25)
+        b.x = nextX
+        b.vx = clamp(b.speed * Math.cos(launchAngle), 90, 225)
+        b.vy = b.speed * Math.sin(launchAngle) - (b.speed > 165 ? 36 : 12)
+        b.y = cur.y - 7
+        b.angVel = isPressing ? -2.2 : 0
+      } else {
+        b.x = nextX
+        b.y = next.y - 6
+        b.vx = b.speed * Math.cos(next.angle)
+        b.vy = b.speed * Math.sin(next.angle)
+        const wheelieOffset = isPressing && b.speed > 195 ? -0.14 : 0
+        b.angle = next.angle + wheelieOffset
+        b.angVel = 0
       }
     } else {
       b.airTime += dt
@@ -680,7 +596,8 @@ export function createGameEngine(initialSeed = 20261110) {
         if (b.airFlips > 0) {
           const gTarget = sampleTerrain(b.x)
           const targetAngle = gTarget.abyss ? 0.25 : gTarget.angle
-          b.angle += normalizeAngle(targetAngle - b.angle) * Math.min(1, 9.0 * dt)
+          const assistRate = state.difficultyMode === 0 ? 11.0 : 7.5
+          b.angle += normalizeAngle(targetAngle - b.angle) * Math.min(1, assistRate * dt)
         }
       }
 
@@ -711,7 +628,7 @@ export function createGameEngine(initialSeed = 20261110) {
         }
 
         const diff = Math.abs(normalizeAngle(b.angle - ground.angle))
-        if (diff > 1.12) {
+        if (diff > crashAngleLimit) {
           triggerCrash('РАЗБИЛСЯ!')
           return { event: 'crash' }
         }
@@ -722,14 +639,14 @@ export function createGameEngine(initialSeed = 20261110) {
         b.angVel = 0
 
         const impactSpeed = Math.hypot(b.vx, b.vy)
-        b.speed = clamp(Math.max(b.speed, impactSpeed * 0.88), 110, 275)
+        b.speed = clamp(Math.max(b.speed, impactSpeed * 0.88), 110, maxSpeed)
 
         if (b.airFlips > 0) {
           if (diff < 0.35) {
             state.combo = Math.min(5, state.combo + 1)
             const bonus = b.airFlips * 3 * state.combo
             state.score += bonus
-            b.speed = Math.min(275, b.speed + 25)
+            b.speed = Math.min(maxSpeed, b.speed + 25)
             state.bannerText = 'ИДЕАЛЬНО +' + bonus
             state.bannerTimer = 0.85
           } else {
@@ -747,15 +664,13 @@ export function createGameEngine(initialSeed = 20261110) {
       }
     }
 
-    if (!b.inLoop) {
-      for (let i = 0; i < state.hazards.length; i++) {
-        const h = state.hazards[i]
-        const dx = h.x - b.x
-        const dy = h.y - b.y
-        if (dx * dx + dy * dy < 360) {
-          triggerCrash('ПИЛА!')
-          return { event: 'crash' }
-        }
+    for (let i = 0; i < state.hazards.length; i++) {
+      const h = state.hazards[i]
+      const dx = h.x - b.x
+      const dy = h.y - b.y
+      if (dx * dx + dy * dy < 320) {
+        triggerCrash('ПИЛА!')
+        return { event: 'crash' }
       }
     }
 
@@ -783,14 +698,14 @@ export function createGameEngine(initialSeed = 20261110) {
       state.bestScore = state.score
     }
 
-    while (state.lastX < b.x + 480) {
+    while (state.lastX < b.x + 520) {
       appendProceduralChunk()
     }
     while (state.segs.length > 8 && state.segs[0].x1 < b.x - 180) {
       state.segs.shift()
       if (searchHint > 0) searchHint -= 1
     }
-    while (state.loops.length > 0 && state.loops[0].cx + state.loops[0].r < b.x - 150) {
+    while (state.loops.length > 0 && state.loops[0].cx + state.loops[0].span < b.x - 150) {
       state.loops.shift()
     }
     while (state.worldGems.length > 0 && state.worldGems[0].x < b.x - 120) {
@@ -800,7 +715,7 @@ export function createGameEngine(initialSeed = 20261110) {
       state.hazards.shift()
     }
 
-    updateColors()
+    updateColors(false)
     updateProjections()
     return { event }
   }
@@ -810,7 +725,6 @@ export function createGameEngine(initialSeed = 20261110) {
       status: state.status,
       crashReason: state.crashReason,
       trackColor: state.trackColor,
-      sawColor: state.sawColor,
       score: state.score,
       bestScore: state.bestScore,
       gems: state.gems,
@@ -820,9 +734,7 @@ export function createGameEngine(initialSeed = 20261110) {
       gemX: state.gemX,
       gemY: state.gemY,
       hazX: state.hazX,
-      hazY: state.hazY,
-      loopX: state.loopX,
-      loopY: state.loopY
+      hazY: state.hazY
     }
   }
 
