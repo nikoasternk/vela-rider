@@ -25,7 +25,7 @@ engine.startGame()
 
 assert.strictEqual(engine.state.status, 'playing')
 assert.strictEqual(engine.state.chartData.length, CHART_POINTS)
-assert(engine.state.loops.length >= 1)
+assert(engine.state.segs.some((s) => s.abyss))
 assert(engine.state.hazards.length >= 1)
 
 engine.state.zoomScale = 0.72
@@ -63,17 +63,15 @@ const proBot = createGameEngine(2026)
 proBot.startGame()
 let flipsDone = 0
 let landingsDone = 0
-let loopsCompleted = 0
 for (let i = 0; i < 3000; i++) {
   if (proBot.state.status !== 'playing') {
     proBot.startGame()
   }
   const b = proBot.state.bike
-  const hold = b.onGround || b.inLoop || b.airFlips < 1
+  const hold = b.onGround || b.airFlips < 1
   const res = proBot.step(0.016, hold)
   if (res.event === 'flip') flipsDone += 1
   if (res.event === 'land') landingsDone += 1
-  if (proBot.state.bannerText === 'ПЕТЛЯ +5') loopsCompleted += 1
 
   const snap = proBot.getRenderSnapshot()
   for (let j = 0; j < snap.chartData.length; j++) {
@@ -82,9 +80,7 @@ for (let i = 0; i < 3000; i++) {
 }
 assert(flipsDone >= 15)
 assert(landingsDone >= 15)
-assert(loopsCompleted >= 1)
-console.log('ENGINE_V8_ALL_TESTS_PASSED_OK', {
+console.log('ENGINE_V9_ALL_TESTS_PASSED_OK', {
   flipsDone,
-  landingsDone,
-  loopsCompleted
+  landingsDone
 })
