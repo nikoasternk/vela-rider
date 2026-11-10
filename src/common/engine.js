@@ -1,13 +1,14 @@
 export const VIEW_W = 210
-export const VIEW_H = 290
-export const SLICE_COUNT = 35
-export const SLICE_STEP = 6
-export const BIKE_SCREEN_X = 52
+export const VIEW_H = 240
+export const CHART_POINTS = 16
+export const POINT_STEP = 14
+export const BIKE_SCREEN_X = 42
 
 export const THEMES = [
   {
     name: 'CYBER',
     track: '#00F0FF',
+    fill: '#052636',
     bike: '#FF0055',
     wheel: '#00F0FF',
     visor: '#FFD700'
@@ -15,6 +16,7 @@ export const THEMES = [
   {
     name: 'SYNTH',
     track: '#FF007F',
+    fill: '#2A041C',
     bike: '#00F0FF',
     wheel: '#FF007F',
     visor: '#FFFFFF'
@@ -22,6 +24,7 @@ export const THEMES = [
   {
     name: 'VENOM',
     track: '#00FF66',
+    fill: '#042814',
     bike: '#BC13FE',
     wheel: '#00FF66',
     visor: '#FFFF00'
@@ -29,6 +32,7 @@ export const THEMES = [
   {
     name: 'SOLAR',
     track: '#FFB800',
+    fill: '#2B1D02',
     bike: '#00E5FF',
     wheel: '#FFB800',
     visor: '#FFFFFF'
@@ -56,9 +60,9 @@ export function createGameEngine(initialSeed = 20261110) {
     return (rngState >>> 0) / 4294967296
   }
 
-  const sliceY = new Int16Array(SLICE_COUNT)
-  for (let i = 0; i < SLICE_COUNT; i++) {
-    sliceY[i] = 190
+  const chartData = new Array(CHART_POINTS)
+  for (let i = 0; i < CHART_POINTS; i++) {
+    chartData[i] = 70
   }
 
   const state = {
@@ -73,10 +77,9 @@ export function createGameEngine(initialSeed = 20261110) {
     camY: 0,
     nodes: [],
     worldGems: [],
-    hazards: [],
     bike: {
-      x: 48,
-      y: 184,
+      x: 42,
+      y: 164,
       vx: 0,
       vy: 0,
       speed: 0,
@@ -85,44 +88,24 @@ export function createGameEngine(initialSeed = 20261110) {
       onGround: true,
       airRotation: 0,
       airFlips: 0,
-      rx: 38,
-      ry: 184,
-      r2x: 43,
-      r2y: 184,
-      cx: 48,
-      cy: 184,
-      f2x: 53,
-      f2y: 184,
-      fx: 58,
-      fy: 184,
-      vxVisor: 48,
-      vyVisor: 175
+      rx: 32,
+      ry: 164,
+      cx: 42,
+      cy: 164,
+      fx: 52,
+      fy: 164,
+      vxVisor: 42,
+      vyVisor: 155
     },
     gemX: -30,
     gemY: -30,
-    hazX: -30,
-    hazY: -30,
-    p0x: -30,
-    p0y: -30,
-    p1x: -30,
-    p1y: -30,
-    p0wx: 0,
-    p0wy: 0,
-    p0vx: 0,
-    p0vy: 0,
-    p0life: 0,
-    p1wx: 0,
-    p1wy: 0,
-    p1vx: 0,
-    p1vy: 0,
-    p1life: 0,
-    sliceY
+    chartData
   }
 
   function addNode(x, y, smooth, gap) {
     state.nodes.push({
       x,
-      y: clamp(y, 82, 248),
+      y: clamp(y, 68, 212),
       smooth: Boolean(smooth),
       gap: Boolean(gap)
     })
@@ -134,59 +117,43 @@ export function createGameEngine(initialSeed = 20261110) {
     const y0 = last.y
     const r = nextRand()
 
-    if (r < 0.32) {
-      const amp = 36 + nextRand() * 32
-      const w1 = 78 + nextRand() * 28
-      const w2 = 82 + nextRand() * 28
-      const yValley = clamp(y0 + amp, 135, 242)
-      const yCrest = clamp(yValley - amp * 1.4, 92, 198)
+    if (r < 0.36) {
+      const amp = 34 + nextRand() * 30
+      const w1 = 84 + nextRand() * 28
+      const w2 = 84 + nextRand() * 28
+      const yValley = clamp(y0 + amp, 125, 208)
+      const yCrest = clamp(yValley - amp * 1.35, 76, 168)
       addNode(x0 + w1, yValley, true, false)
       addNode(x0 + w1 + w2, yCrest, true, false)
-      addNode(x0 + w1 + w2 + 72, clamp(yCrest + 30, 128, 228), true, false)
+      addNode(x0 + w1 + w2 + 78, clamp(yCrest + 28, 118, 196), true, false)
       state.worldGems.push({
-        x: x0 + w1 + w2 + 18,
-        y: yCrest - 34,
+        x: x0 + w1 + w2 + 16,
+        y: yCrest - 32,
         taken: false
       })
-    } else if (r < 0.62) {
-      const dipY = clamp(y0 + 38, 148, 242)
-      const lipY = clamp(dipY - 56, 98, 188)
-      const gapW = 48 + nextRand() * 22
-      const catchY = clamp(lipY + 28, 132, 228)
-      addNode(x0 + 64, dipY, true, false)
-      addNode(x0 + 124, lipY, true, true)
-      addNode(x0 + 124 + gapW, catchY, true, false)
-      addNode(x0 + 194 + gapW, clamp(catchY + 20, 142, 232), true, false)
+    } else if (r < 0.70) {
+      const dipY = clamp(y0 + 34, 136, 206)
+      const lipY = clamp(dipY - 52, 84, 164)
+      const gapW = 46 + nextRand() * 20
+      const catchY = clamp(lipY + 26, 122, 198)
+      addNode(x0 + 68, dipY, true, false)
+      addNode(x0 + 132, lipY, true, true)
+      addNode(x0 + 132 + gapW, catchY, true, false)
+      addNode(x0 + 204 + gapW, clamp(catchY + 18, 132, 202), true, false)
       state.worldGems.push({
-        x: x0 + 124 + gapW * 0.5,
-        y: lipY - 46,
-        taken: false
-      })
-    } else if (r < 0.84) {
-      const plungeY = clamp(y0 + 62, 172, 246)
-      const peakY = clamp(plungeY - 80, 90, 172)
-      addNode(x0 + 82, plungeY, true, false)
-      addNode(x0 + 162, peakY, true, false)
-      addNode(x0 + 238, clamp(peakY + 46, 138, 228), true, false)
-      state.worldGems.push({
-        x: x0 + 178,
-        y: peakY - 48,
+        x: x0 + 132 + gapW * 0.5,
+        y: lipY - 40,
         taken: false
       })
     } else {
-      const flatY = clamp(y0, 140, 218)
-      const kickerY = clamp(flatY - 28, 112, 190)
-      addNode(x0 + 54, flatY, true, false)
-      addNode(x0 + 92, kickerY, true, false)
-      addNode(x0 + 148, flatY, true, false)
-      addNode(x0 + 210, clamp(flatY + 16, 142, 228), true, false)
-      state.hazards.push({
-        x: x0 + 122,
-        y: flatY - 12
-      })
+      const plungeY = clamp(y0 + 54, 154, 210)
+      const peakY = clamp(plungeY - 72, 76, 152)
+      addNode(x0 + 84, plungeY, true, false)
+      addNode(x0 + 168, peakY, true, false)
+      addNode(x0 + 248, clamp(peakY + 42, 128, 198), true, false)
       state.worldGems.push({
-        x: x0 + 122,
-        y: kickerY - 42,
+        x: x0 + 182,
+        y: peakY - 42,
         taken: false
       })
     }
@@ -237,37 +204,22 @@ export function createGameEngine(initialSeed = 20261110) {
     return { y, angle: Math.atan2(dydx, 1), gap: false }
   }
 
-  function spawnSpark(wx, wy, vx, vy) {
-    if (state.p0life <= state.p1life) {
-      state.p0wx = wx
-      state.p0wy = wy
-      state.p0vx = vx
-      state.p0vy = vy
-      state.p0life = 0.26
-    } else {
-      state.p1wx = wx
-      state.p1wy = wy
-      state.p1vx = vx
-      state.p1vy = vy
-      state.p1life = 0.26
-    }
-  }
-
   function updateProjections() {
     const b = state.bike
     const worldLeft = b.x - BIKE_SCREEN_X
 
-    const targetCamY = clamp(b.y - 168, -85, 60)
+    const targetCamY = clamp(b.y - 148, -70, 50)
     state.camY += (targetCamY - state.camY) * 0.25
     const camY = state.camY
 
-    for (let i = 0; i < SLICE_COUNT; i++) {
-      const sampleX = worldLeft + i * SLICE_STEP + 3
+    for (let i = 0; i < CHART_POINTS; i++) {
+      const sampleX = worldLeft + i * POINT_STEP
       const t = sampleTerrain(sampleX)
       if (t.gap) {
-        sliceY[i] = 310
+        chartData[i] = 2
       } else {
-        sliceY[i] = clamp((t.y - camY) | 0, 10, 282)
+        const syScreen = clamp((t.y - camY) | 0, 12, VIEW_H - 6)
+        chartData[i] = clamp(VIEW_H - syScreen, 4, VIEW_H - 8)
       }
     }
 
@@ -276,16 +228,12 @@ export function createGameEngine(initialSeed = 20261110) {
     const sx = BIKE_SCREEN_X
     const sy = b.y - camY
 
-    b.rx = (sx - cosA * 11 - 6) | 0
-    b.ry = (sy - sinA * 11 - 6) | 0
-    b.r2x = (sx - cosA * 5 - 4) | 0
-    b.r2y = (sy - sinA * 5 - 4) | 0
-    b.cx = (sx - 5) | 0
+    b.rx = (sx - cosA * 10 - 6) | 0
+    b.ry = (sy - sinA * 10 - 6) | 0
+    b.cx = (sx - 6) | 0
     b.cy = (sy - 5) | 0
-    b.f2x = (sx + cosA * 5 - 4) | 0
-    b.f2y = (sy + sinA * 5 - 4) | 0
-    b.fx = (sx + cosA * 11 - 6) | 0
-    b.fy = (sy + sinA * 11 - 6) | 0
+    b.fx = (sx + cosA * 10 - 6) | 0
+    b.fy = (sy + sinA * 10 - 6) | 0
     b.vxVisor = (sx + sinA * 8 - 4) | 0
     b.vyVisor = (sy - cosA * 8 - 4) | 0
 
@@ -305,57 +253,22 @@ export function createGameEngine(initialSeed = 20261110) {
     }
     state.gemX = gx
     state.gemY = gy
-
-    let hx = -30
-    let hy = -30
-    for (let i = 0; i < state.hazards.length; i++) {
-      const h = state.hazards[i]
-      const scX = (h.x - worldLeft - 5) | 0
-      const scY = (h.y - camY - 12) | 0
-      if (scX >= -10 && scX <= VIEW_W + 10) {
-        hx = scX
-        hy = clamp(scY, 6, VIEW_H - 16)
-        break
-      }
-    }
-    state.hazX = hx
-    state.hazY = hy
-
-    if (state.p0life > 0) {
-      state.p0x = (state.p0wx - worldLeft - 3) | 0
-      state.p0y = (state.p0wy - camY - 3) | 0
-    } else {
-      state.p0x = -30
-      state.p0y = -30
-    }
-
-    if (state.p1life > 0) {
-      state.p1x = (state.p1wx - worldLeft - 3) | 0
-      state.p1y = (state.p1wy - camY - 3) | 0
-    } else {
-      state.p1x = -30
-      state.p1y = -30
-    }
   }
 
   function resetWorld() {
     state.nodes = []
     state.worldGems = []
-    state.hazards = []
     searchHint = 0
-    addNode(0, 190, true, false)
-    addNode(80, 190, true, false)
-    addNode(155, 220, true, false)
-    addNode(230, 162, true, false)
+    addNode(0, 170, true, false)
+    addNode(84, 170, true, false)
+    addNode(168, 198, true, false)
+    addNode(252, 144, true, false)
     for (let i = 0; i < 5; i++) {
       appendProceduralChunk()
     }
 
-    state.p0life = 0
-    state.p1life = 0
-
-    const startSample = sampleTerrain(48)
-    state.bike.x = 48
+    const startSample = sampleTerrain(42)
+    state.bike.x = 42
     state.bike.y = startSample.y - 6
     state.bike.vx = 0
     state.bike.vy = 0
@@ -376,8 +289,6 @@ export function createGameEngine(initialSeed = 20261110) {
     if (state.score > state.bestScore) {
       state.bestScore = state.score
     }
-    spawnSpark(state.bike.x, state.bike.y, -60, -90)
-    spawnSpark(state.bike.x, state.bike.y, 70, -80)
     updateProjections()
   }
 
@@ -386,8 +297,8 @@ export function createGameEngine(initialSeed = 20261110) {
     state.status = 'playing'
     state.score = 0
     state.combo = 1
-    state.bannerText = 'FULL THROTTLE!'
-    state.bannerTimer = 0.9
+    state.bannerText = 'GO!'
+    state.bannerTimer = 0.8
     updateProjections()
   }
 
@@ -397,25 +308,14 @@ export function createGameEngine(initialSeed = 20261110) {
   }
 
   function step(dtInput, isPressing) {
-    const dt = clamp(dtInput, 0.008, 0.045)
+    const dt = clamp(dtInput, 0.015, 0.055)
     let event = null
 
     if (state.bannerTimer > 0) {
       state.bannerTimer = Math.max(0, state.bannerTimer - dt)
       if (state.bannerTimer === 0 && state.status === 'playing') {
-        state.bannerText = 'RIDER 60FPS'
+        state.bannerText = ''
       }
-    }
-
-    if (state.p0life > 0) {
-      state.p0wx += state.p0vx * dt
-      state.p0wy += state.p0vy * dt
-      state.p0life -= dt
-    }
-    if (state.p1life > 0) {
-      state.p1wx += state.p1vx * dt
-      state.p1wy += state.p1vy * dt
-      state.p1life -= dt
     }
 
     if (state.status !== 'playing') {
@@ -429,13 +329,13 @@ export function createGameEngine(initialSeed = 20261110) {
     if (b.onGround) {
       const cur = sampleTerrain(b.x)
       const slopeGravity = gravity * Math.sin(cur.angle)
-      const throttleAcc = isPressing ? 310 : 0
+      const throttleAcc = isPressing ? 320 : 0
       b.speed += (slopeGravity + throttleAcc) * dt
       b.speed *= isPressing ? 0.994 : 0.982
       b.speed = clamp(b.speed, -50, 320)
 
-      if (isPressing && b.speed < 95) {
-        b.speed += 180 * dt
+      if (isPressing && b.speed < 105) {
+        b.speed += 190 * dt
       }
 
       const prevAngle = cur.angle
@@ -446,7 +346,7 @@ export function createGameEngine(initialSeed = 20261110) {
       if (next.gap || (angleDrop > 0.14 && b.speed > 135)) {
         b.onGround = false
         b.vx = b.speed * Math.cos(prevAngle)
-        b.vy = b.speed * Math.sin(prevAngle) - (next.gap ? 38 : 54)
+        b.vy = b.speed * Math.sin(prevAngle) - (next.gap ? 40 : 56)
         b.angVel = 0
         b.airRotation = 0
         b.airFlips = 0
@@ -455,14 +355,6 @@ export function createGameEngine(initialSeed = 20261110) {
         b.angle = next.angle
         b.vx = b.speed * Math.cos(next.angle)
         b.vy = b.speed * Math.sin(next.angle)
-        if (isPressing && state.p0life <= 0) {
-          spawnSpark(
-            b.x - Math.cos(b.angle) * 12,
-            b.y - Math.sin(b.angle) * 12,
-            -b.vx * 0.3,
-            -25
-          )
-        }
       }
     } else {
       b.x += b.vx * dt
@@ -470,17 +362,9 @@ export function createGameEngine(initialSeed = 20261110) {
       b.y += b.vy * dt
 
       if (isPressing) {
-        b.angVel = Math.max(-11.4, b.angVel - 32.0 * dt)
-        if (state.p1life <= 0) {
-          spawnSpark(
-            b.x - Math.cos(b.angle) * 11,
-            b.y - Math.sin(b.angle) * 11,
-            -b.vx * 0.2,
-            30
-          )
-        }
+        b.angVel = Math.max(-11.5, b.angVel - 34.0 * dt)
       } else {
-        b.angVel *= 0.62
+        b.angVel *= 0.6
       }
 
       const dTheta = b.angVel * dt
@@ -491,8 +375,8 @@ export function createGameEngine(initialSeed = 20261110) {
         if (totalFlips > b.airFlips) {
           b.airFlips = totalFlips
           state.score += 2 * state.combo
-          state.bannerText = 'FLIP x' + b.airFlips + '!'
-          state.bannerTimer = 0.85
+          state.bannerText = 'FLIP x' + b.airFlips
+          state.bannerTimer = 0.8
           event = 'flip'
         }
       }
@@ -500,7 +384,7 @@ export function createGameEngine(initialSeed = 20261110) {
       const ground = sampleTerrain(b.x)
       if (!ground.gap && b.y >= ground.y - 6) {
         const diff = Math.abs(normalizeAngle(b.angle - ground.angle))
-        if (diff > 1.34) {
+        if (diff > 1.35) {
           triggerCrash('CRASHED!')
           return { event: 'crash' }
         }
@@ -510,39 +394,29 @@ export function createGameEngine(initialSeed = 20261110) {
         b.angle = ground.angle
         const projected =
           b.vx * Math.cos(ground.angle) + b.vy * Math.sin(ground.angle)
-        b.speed = clamp(Math.max(95, projected), 95, 320)
+        b.speed = clamp(Math.max(100, projected), 100, 320)
         b.angVel = 0
 
         if (b.airFlips > 0) {
-          if (diff < 0.35) {
+          if (diff < 0.36) {
             state.combo = Math.min(5, state.combo + 1)
             const bonus = b.airFlips * 3 * state.combo
             state.score += bonus
             state.bannerText = 'PERFECT +' + bonus
-            state.bannerTimer = 1.0
+            state.bannerTimer = 0.9
           } else {
             state.combo = 1
             const bonus = b.airFlips * 2
             state.score += bonus
             state.bannerText = 'CLEAN +' + bonus
-            state.bannerTimer = 0.85
+            state.bannerTimer = 0.8
           }
           event = 'land'
         }
         b.airRotation = 0
         b.airFlips = 0
-      } else if (b.y > 330) {
+      } else if (b.y > 290) {
         triggerCrash('VOID FALL!')
-        return { event: 'crash' }
-      }
-    }
-
-    for (let i = 0; i < state.hazards.length; i++) {
-      const h = state.hazards[i]
-      const dx = h.x - b.x
-      const dy = h.y - b.y
-      if (dx * dx + dy * dy < 196) {
-        triggerCrash('LASER HIT!')
         return { event: 'crash' }
       }
     }
@@ -552,12 +426,12 @@ export function createGameEngine(initialSeed = 20261110) {
       if (!g.taken) {
         const dx = g.x - b.x
         const dy = g.y - b.y
-        if (dx * dx + dy * dy < 360) {
+        if (dx * dx + dy * dy < 380) {
           g.taken = true
           state.gems += 1
           state.score += 3
           state.bannerText = 'GEM +3'
-          state.bannerTimer = 0.7
+          state.bannerTimer = 0.6
           if (!event) event = 'gem'
         }
       }
@@ -581,9 +455,6 @@ export function createGameEngine(initialSeed = 20261110) {
     while (state.worldGems.length > 0 && state.worldGems[0].x < b.x - 90) {
       state.worldGems.shift()
     }
-    while (state.hazards.length > 0 && state.hazards[0].x < b.x - 90) {
-      state.hazards.shift()
-    }
 
     updateProjections()
     return { event }
@@ -598,15 +469,9 @@ export function createGameEngine(initialSeed = 20261110) {
       gems: state.gems,
       bannerText: state.bannerText,
       bike: state.bike,
-      sliceY: state.sliceY,
+      chartData: state.chartData,
       gemX: state.gemX,
-      gemY: state.gemY,
-      hazX: state.hazX,
-      hazY: state.hazY,
-      p0x: state.p0x,
-      p0y: state.p0y,
-      p1x: state.p1x,
-      p1y: state.p1y
+      gemY: state.gemY
     }
   }
 
@@ -619,4 +484,4 @@ export function createGameEngine(initialSeed = 20261110) {
     step,
     getRenderSnapshot
   }
-  }
+            }
