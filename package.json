@@ -6,7 +6,7 @@
     "icon": "node tools/gen-icon.mjs",
     "test": "node tools/gen-icon.mjs && node tools/test-engine.mjs",
     "prerelease": "node tools/gen-icon.mjs",
-    "release": "aiot release"
+    "release": "aiot release --enable-jsc --enable-protobuf"
   },
   "devDependencies": {
     "@aiot-toolkit/jsc": "^1.0.3",
