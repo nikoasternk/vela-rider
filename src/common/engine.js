@@ -1,5 +1,5 @@
 export const VIEW_W = 208
-export const VIEW_H = 260
+export const VIEW_H = 280
 export const CHART_POINTS = 17
 export const POINT_STEP = 13
 export const BIKE_SCREEN_X = 52
@@ -53,10 +53,9 @@ export function createGameEngine(initialSeed = 20261110) {
     return (rngState >>> 0) / 4294967296
   }
 
-  const rawSampleY = new Float64Array(CHART_POINTS)
   const chartData = new Array(CHART_POINTS)
   for (let i = 0; i < CHART_POINTS; i++) {
-    chartData[i] = 120
+    chartData[i] = 130
   }
 
   const state = {
@@ -72,29 +71,32 @@ export function createGameEngine(initialSeed = 20261110) {
     fillColor: '#042230',
     turboFlip: false,
     camY: 0,
-    nodes: [],
+    segs: [],
+    lastX: 0,
+    lastY: 160,
+    lastM: 0,
     worldGems: [],
     hazards: [],
     bike: {
       x: 52,
-      y: 140,
-      vx: 0,
+      y: 154,
+      vx: 115,
       vy: 0,
-      speed: 0,
+      speed: 115,
       angle: 0,
       angVel: 0,
       onGround: true,
       airTime: 0,
       airRotation: 0,
       airFlips: 0,
-      rx: 41,
-      ry: 140,
-      cx: 52,
-      cy: 140,
-      fx: 63,
-      fy: 140,
-      vxVisor: 52,
-      vyVisor: 131
+      rx: 42,
+      ry: 148,
+      cx: 46,
+      cy: 149,
+      fx: 56,
+      fy: 148,
+      vxVisor: 48,
+      vyVisor: 140
     },
     gemX: -30,
     gemY: -30,
@@ -103,83 +105,101 @@ export function createGameEngine(initialSeed = 20261110) {
     chartData
   }
 
-  function addNode(x, y) {
-    state.nodes.push({ x, y })
+  function addSegment(dx, nextM, isKicker) {
+    const x0 = state.lastX
+    const y0 = state.lastY
+    const m0 = state.lastM
+    const x1 = x0 + dx
+    const y1 = y0 + dx * 0.5 * (m0 + nextM)
+    const c1 = dx * m0
+    const c2 = dx * 0.5 * (nextM - m0)
+    state.segs.push({
+      x0,
+      x1,
+      y0,
+      y1,
+      m0,
+      m1: nextM,
+      dm: nextM - m0,
+      invDx: 1.0 / dx,
+      c1,
+      c2,
+      kicker: Boolean(isKicker)
+    })
+    state.lastX = x1
+    state.lastY = y1
+    state.lastM = nextM
   }
 
   function appendProceduralChunk() {
-    const last = state.nodes[state.nodes.length - 1]
-    const x0 = last.x
-    const y0 = last.y
     const r = nextRand()
 
-    if (r < 0.30) {
-      const dip = 42 + nextRand() * 28
-      const rise = 62 + nextRand() * 34
-      const w1 = 92 + nextRand() * 24
-      const w2 = 88 + nextRand() * 22
-      const w3 = 96 + nextRand() * 26
-      const yValley = y0 + dip
-      const yCrest = yValley - rise
-      const yLand = yCrest + 44 + nextRand() * 24
-      addNode(x0 + w1, yValley)
-      addNode(x0 + w1 + w2, yCrest)
-      addNode(x0 + w1 + w2 + w3, yLand)
+    if (r < 0.32) {
+      const downM = 0.44 + nextRand() * 0.16
+      const upM = -(0.56 + nextRand() * 0.14)
+      addSegment(85, downM, false)
+      addSegment(80, 0.0, false)
+      addSegment(85, upM, true)
+      const lipX = state.lastX
+      const lipY = state.lastY
+      addSegment(60, 0.48, false)
+      addSegment(95, 0.28, false)
+      addSegment(85, 0.0, false)
       state.worldGems.push({
-        x: x0 + w1 + w2 + 24,
-        y: yCrest - 36,
+        x: lipX + 62,
+        y: lipY - 42,
         taken: false
       })
-    } else if (r < 0.58) {
-      const climb = 58 + nextRand() * 36
-      const drop = 68 + nextRand() * 36
-      const w1 = 96 + nextRand() * 24
-      const w2 = 104 + nextRand() * 28
-      const yPeak = y0 - climb
-      const yBowl = yPeak + drop
-      const yOut = yBowl - 32
-      addNode(x0 + w1, yPeak)
-      addNode(x0 + w1 + w2, yBowl)
-      addNode(x0 + w1 + w2 + 88, yOut)
+    } else if (r < 0.62) {
+      const upM = -(0.52 + nextRand() * 0.15)
+      addSegment(75, 0.25, false)
+      addSegment(70, 0.0, false)
+      addSegment(85, upM, true)
+      const peakX = state.lastX
+      const peakY = state.lastY
+      addSegment(65, 0.52, false)
+      addSegment(95, 0.24, false)
+      addSegment(85, 0.0, false)
       state.worldGems.push({
-        x: x0 + w1 + 18,
-        y: yPeak - 38,
+        x: peakX + 58,
+        y: peakY - 40,
         taken: false
       })
-    } else if (r < 0.82) {
-      const approachDip = 36 + nextRand() * 22
-      const kickerRise = 56 + nextRand() * 26
-      const pitDepth = 68 + nextRand() * 22
-      const yDip = y0 + approachDip
-      const yLip = yDip - kickerRise
-      const yPit = yLip + pitDepth
-      const yCatch = yLip + 18 + nextRand() * 20
-      addNode(x0 + 82, yDip)
-      addNode(x0 + 154, yLip)
-      addNode(x0 + 218, yPit)
-      addNode(x0 + 284, yCatch)
-      addNode(x0 + 364, yCatch + 24)
+    } else if (r < 0.84) {
+      addSegment(75, 0.38, false)
+      addSegment(70, 0.0, false)
+      addSegment(80, -0.64, true)
+      const lipX = state.lastX
+      const lipY = state.lastY
+      addSegment(50, 0.65, false)
+      const pitX = state.lastX + 18
+      addSegment(45, 0.0, false)
+      const pitY = state.lastY
+      addSegment(65, 0.32, false)
+      addSegment(85, 0.0, false)
       state.hazards.push({
-        x: x0 + 218,
-        y: yPit - 8
+        x: pitX,
+        y: pitY - 8
       })
       state.worldGems.push({
-        x: x0 + 218,
-        y: yLip - 42,
+        x: lipX + 56,
+        y: lipY - 44,
         taken: false
       })
     } else {
-      const plunge = 64 + nextRand() * 34
-      const launch = 74 + nextRand() * 34
-      const yLow = y0 + plunge
-      const yHigh = yLow - launch
-      const yNext = yHigh + 38
-      addNode(x0 + 98, yLow)
-      addNode(x0 + 184, yHigh)
-      addNode(x0 + 278, yNext)
+      const m1 = 0.50 + nextRand() * 0.16
+      const m2 = -(0.62 + nextRand() * 0.14)
+      addSegment(90, m1, false)
+      addSegment(85, 0.0, false)
+      addSegment(90, m2, true)
+      const crestX = state.lastX
+      const crestY = state.lastY
+      addSegment(65, 0.50, false)
+      addSegment(95, 0.25, false)
+      addSegment(85, 0.0, false)
       state.worldGems.push({
-        x: x0 + 204,
-        y: yHigh - 44,
+        x: crestX + 64,
+        y: crestY - 46,
         taken: false
       })
     }
@@ -187,46 +207,49 @@ export function createGameEngine(initialSeed = 20261110) {
 
   let searchHint = 0
 
-  function sampleTerrain(wx) {
-    const nodes = state.nodes
-    const len = nodes.length
-    if (searchHint >= len - 1) searchHint = 0
-
-    let segIdx = searchHint
-    if (wx < nodes[segIdx].x) {
-      segIdx = 0
-    }
-    for (let i = segIdx; i < len - 1; i++) {
-      if (wx >= nodes[i].x && wx <= nodes[i + 1].x) {
-        segIdx = i
+  function sampleTerrainY(wx) {
+    const segs = state.segs
+    const len = segs.length
+    if (searchHint >= len) searchHint = 0
+    let idx = searchHint
+    if (wx < segs[idx].x0) idx = 0
+    for (let i = idx; i < len; i++) {
+      const s = segs[i]
+      if (wx <= s.x1 || i === len - 1) {
         searchHint = i
-        break
-      }
-      if (wx > nodes[i + 1].x) {
-        segIdx = i
+        const u = clamp((wx - s.x0) * s.invDx, 0, 1)
+        return s.y0 + u * (s.c1 + u * s.c2)
       }
     }
+    return state.lastY
+  }
 
-    const a = nodes[segIdx]
-    const b = nodes[segIdx + 1] || a
-    const dx = Math.max(1, b.x - a.x)
-    const u = clamp((wx - a.x) / dx, 0, 1)
-
-    const mu = (1 - Math.cos(3.141592653589793 * u)) * 0.5
-    const y = a.y * (1 - mu) + b.y * mu
-    const dydx =
-      ((1.5707963267948966 * Math.sin(3.141592653589793 * u)) / dx) *
-      (b.y - a.y)
-
-    return {
-      y,
-      dydx,
-      angle: Math.atan2(dydx, 1)
+  function sampleTerrain(wx) {
+    const segs = state.segs
+    const len = segs.length
+    if (searchHint >= len) searchHint = 0
+    let idx = searchHint
+    if (wx < segs[idx].x0) idx = 0
+    for (let i = idx; i < len; i++) {
+      const s = segs[i]
+      if (wx <= s.x1 || i === len - 1) {
+        searchHint = i
+        const u = clamp((wx - s.x0) * s.invDx, 0, 1)
+        const y = s.y0 + u * (s.c1 + u * s.c2)
+        const m = s.m0 + u * s.dm
+        return {
+          y,
+          m,
+          angle: Math.atan2(m, 1),
+          kicker: s.kicker && u > 0.86
+        }
+      }
     }
+    return { y: state.lastY, m: 0, angle: 0, kicker: false }
   }
 
   function updateColors() {
-    const phase = (state.bike.x * 0.00025 + state.score * 0.009) % 1
+    const phase = (state.bike.x * 0.00024 + state.score * 0.008) % 1
     state.trackColor = interpolateSpectrum(phase, 1.0)
     state.fillColor = interpolateSpectrum(phase, 0.16)
   }
@@ -234,38 +257,22 @@ export function createGameEngine(initialSeed = 20261110) {
   function updateProjections() {
     const b = state.bike
     const worldLeft = b.x - BIKE_SCREEN_X
+    const groundAtBike = sampleTerrainY(b.x)
 
-    let minY = b.y - 24
-    let maxY = b.y + 20
-    for (let i = 0; i < CHART_POINTS; i++) {
-      const sy = sampleTerrain(worldLeft + i * POINT_STEP).y
-      rawSampleY[i] = sy
-      if (sy < minY) minY = sy
-      if (sy > maxY) maxY = sy
-    }
-
-    const midY = (minY + maxY) * 0.5
-    const targetCamY = b.y * 0.55 + midY * 0.45 - VIEW_H * 0.52
-    state.camY += (targetCamY - state.camY) * 0.28
-
-    if (maxY - state.camY > VIEW_H - 14) {
-      state.camY = maxY - (VIEW_H - 14)
-    }
-    if (minY - state.camY < 14) {
-      state.camY = minY - 14
-    }
-
+    const focusY = b.onGround ? b.y : b.y * 0.62 + groundAtBike * 0.38
+    const targetCamY = focusY - 146
+    state.camY += (targetCamY - state.camY) * 0.24
     const camY = state.camY
 
     for (let i = 0; i < CHART_POINTS; i++) {
-      const syScreen = rawSampleY[i] - camY
-      chartData[i] = clamp(Math.round(VIEW_H - syScreen), 8, VIEW_H - 8)
+      const sy = sampleTerrainY(worldLeft + i * POINT_STEP) - camY
+      chartData[i] = clamp(Math.round(VIEW_H - sy), 6, VIEW_H - 6)
     }
 
     const cosA = Math.cos(b.angle)
     const sinA = Math.sin(b.angle)
     const sx = BIKE_SCREEN_X
-    const sy = clamp(b.y - camY, 10, VIEW_H - 10)
+    const sy = clamp(b.y - camY, 12, VIEW_H - 12)
 
     b.rx = Math.round(sx - cosA * 10 - 6)
     b.ry = Math.round(sy - sinA * 10 - 6)
@@ -310,14 +317,21 @@ export function createGameEngine(initialSeed = 20261110) {
   }
 
   function resetWorld() {
-    state.nodes = []
+    state.segs = []
     state.worldGems = []
     state.hazards = []
+    state.lastX = 0
+    state.lastY = 160
+    state.lastM = 0
     searchHint = 0
-    addNode(0, 150)
-    addNode(95, 150)
-    addNode(185, 184)
-    addNode(275, 126)
+
+    addSegment(95, 0.0, false)
+    addSegment(80, 0.42, false)
+    addSegment(75, 0.0, false)
+    addSegment(85, -0.58, true)
+    addSegment(60, 0.48, false)
+    addSegment(90, 0.24, false)
+    addSegment(85, 0.0, false)
     for (let i = 0; i < 6; i++) {
       appendProceduralChunk()
     }
@@ -325,16 +339,16 @@ export function createGameEngine(initialSeed = 20261110) {
     const startSample = sampleTerrain(52)
     state.bike.x = 52
     state.bike.y = startSample.y - 6
-    state.bike.vx = 120
+    state.bike.vx = 115
     state.bike.vy = 0
-    state.bike.speed = 120
+    state.bike.speed = 115
     state.bike.angle = startSample.angle
     state.bike.angVel = 0
     state.bike.onGround = true
     state.bike.airTime = 0
     state.bike.airRotation = 0
     state.bike.airFlips = 0
-    state.camY = state.bike.y - VIEW_H * 0.55
+    state.camY = state.bike.y - 146
     updateColors()
     updateProjections()
   }
@@ -380,53 +394,52 @@ export function createGameEngine(initialSeed = 20261110) {
     }
 
     const b = state.bike
-    const gravity = 430
+    const gravity = 520
 
     if (b.onGround) {
       const cur = sampleTerrain(b.x)
 
       if (isPressing) {
-        if (b.speed < 155) {
-          b.speed += 520 * dt
+        if (b.speed < 150) {
+          b.speed += 420 * dt
         }
-        const uphillBoost = cur.angle < 0 ? -Math.sin(cur.angle) * 95 : 0
-        const downhillBoost = cur.angle > 0 ? Math.sin(cur.angle) * 240 : 0
-        b.speed += (330 + uphillBoost + downhillBoost) * dt
+        const uphillBoost = cur.angle < 0 ? -Math.sin(cur.angle) * 90 : 0
+        const downhillBoost = cur.angle > 0 ? Math.sin(cur.angle) * 180 : 0
+        b.speed += (260 + uphillBoost + downhillBoost) * dt
       } else {
-        const downhillCoast = cur.angle > 0 ? Math.sin(cur.angle) * 160 : 0
+        const downhillCoast = cur.angle > 0 ? Math.sin(cur.angle) * 120 : 0
         b.speed += downhillCoast * dt
-        b.speed *= 1 - 0.14 * dt
+        b.speed *= 1 - 0.10 * dt
       }
 
-      b.speed = clamp(b.speed, 115, 375)
+      b.speed = clamp(b.speed, 110, 265)
 
       const stepDist = b.speed * dt
-      const nextX = b.x + Math.max(2.5, stepDist * Math.cos(cur.angle * 0.65))
+      const nextX = b.x + Math.max(2.0, stepDist * Math.cos(cur.angle * 0.6))
       const next = sampleTerrain(nextX)
 
       const angleDrop = next.angle - cur.angle
-      const centrifugalLift = (b.speed * angleDrop) / dt
 
       if (
-        (angleDrop > 0.055 && b.speed > 145 && centrifugalLift > 210) ||
-        (cur.angle < -0.22 && angleDrop > 0.04 && b.speed > 140)
+        (cur.kicker && b.speed > 135) ||
+        (angleDrop > 0.085 && b.speed > 150)
       ) {
         b.onGround = false
         b.airTime = 0
         b.airRotation = 0
         b.airFlips = 0
-        const launchAngle = Math.min(cur.angle, -0.24)
+        const launchAngle = clamp(cur.angle, -0.68, -0.32)
         b.x = nextX
-        b.vx = Math.max(145, b.speed * Math.cos(launchAngle))
-        b.vy = b.speed * Math.sin(launchAngle) - 58
+        b.vx = clamp(b.speed * Math.cos(launchAngle), 140, 215)
+        b.vy = b.speed * Math.sin(launchAngle) - 34
         b.y = cur.y - 7
-        b.angVel = isPressing ? -5.5 : 0
+        b.angVel = isPressing ? -8.5 : 0
       } else {
         b.x = nextX
         b.y = next.y - 6
         b.vx = b.speed * Math.cos(next.angle)
         b.vy = b.speed * Math.sin(next.angle)
-        const wheelieOffset = isPressing && b.speed > 210 ? -0.12 : 0
+        const wheelieOffset = isPressing && b.speed > 180 ? -0.12 : 0
         b.angle = next.angle + wheelieOffset
         b.angVel = 0
       }
@@ -436,13 +449,13 @@ export function createGameEngine(initialSeed = 20261110) {
       b.vy += gravity * dt
       b.y += b.vy * dt
 
-      const maxSpin = state.turboFlip ? 15.2 : 13.0
-      const spinAcc = state.turboFlip ? 54.0 : 44.0
+      const maxSpin = state.turboFlip ? 17.5 : 14.8
+      const spinAcc = state.turboFlip ? 110.0 : 92.0
 
       if (isPressing) {
         b.angVel = Math.max(-maxSpin, b.angVel - spinAcc * dt)
       } else {
-        b.angVel *= Math.max(0, 1 - 18.0 * dt)
+        b.angVel *= Math.max(0, 1 - 19.0 * dt)
       }
 
       const dTheta = b.angVel * dt
@@ -460,7 +473,7 @@ export function createGameEngine(initialSeed = 20261110) {
       }
 
       const ground = sampleTerrain(b.x)
-      if (b.y >= ground.y - 6 && b.vy >= -20) {
+      if (b.y >= ground.y - 6 && b.vy >= -10) {
         const diff = Math.abs(normalizeAngle(b.angle - ground.angle))
         if (diff > 1.38) {
           triggerCrash('РАЗБИЛСЯ!')
@@ -473,14 +486,14 @@ export function createGameEngine(initialSeed = 20261110) {
         b.angVel = 0
 
         const impactSpeed = Math.hypot(b.vx, b.vy)
-        b.speed = clamp(Math.max(b.speed, impactSpeed * 0.92), 130, 375)
+        b.speed = clamp(Math.max(b.speed, impactSpeed * 0.88), 125, 265)
 
         if (b.airFlips > 0) {
           if (diff < 0.38) {
             state.combo = Math.min(5, state.combo + 1)
             const bonus = b.airFlips * 3 * state.combo
             state.score += bonus
-            b.speed = Math.min(375, b.speed + 35)
+            b.speed = Math.min(265, b.speed + 25)
             state.bannerText = 'ИДЕАЛЬНО +' + bonus
             state.bannerTimer = 0.85
           } else {
@@ -524,7 +537,7 @@ export function createGameEngine(initialSeed = 20261110) {
       }
     }
 
-    const distanceScore = (b.x / 95) | 0
+    const distanceScore = (b.x / 90) | 0
     if (distanceScore > state.score) {
       state.score = distanceScore
     }
@@ -532,11 +545,11 @@ export function createGameEngine(initialSeed = 20261110) {
       state.bestScore = state.score
     }
 
-    while (state.nodes[state.nodes.length - 1].x < b.x + 380) {
+    while (state.lastX < b.x + 420) {
       appendProceduralChunk()
     }
-    while (state.nodes.length > 10 && state.nodes[1].x < b.x - 160) {
-      state.nodes.shift()
+    while (state.segs.length > 8 && state.segs[0].x1 < b.x - 160) {
+      state.segs.shift()
       if (searchHint > 0) searchHint -= 1
     }
     while (state.worldGems.length > 0 && state.worldGems[0].x < b.x - 100) {
@@ -582,4 +595,4 @@ export function createGameEngine(initialSeed = 20261110) {
     step,
     getRenderSnapshot
   }
-      }
+        }
