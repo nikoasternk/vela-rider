@@ -363,7 +363,7 @@ export function createGameEngine(initialSeed = 20261110) {
           y,
           m,
           angle: Math.atan2(m, 1),
-          kicker: s.kicker && u > 0.76,
+          kicker: s.kicker && u > 0.74,
           abyss: s.abyss,
           island: s.island,
           lipY: s.lipY
@@ -625,15 +625,15 @@ export function createGameEngine(initialSeed = 20261110) {
         b.airRotation = 0
         b.airFlips = 0
 
-        const launchAngle = clamp(cur.angle, -0.78, -0.15)
-        const effSpeed = Math.max(b.speed, cur.island ? 172 : isKickerLaunch ? 160 : b.speed)
-        const liftBonus = isKickerLaunch ? 32 : cur.island ? 36 : 10
+        const launchAngle = clamp(cur.angle, -0.78, -0.20)
+        const effSpeed = Math.max(b.speed, isKickerLaunch || cur.island ? 185 : b.speed)
+        const liftBonus = isKickerLaunch || cur.island ? 46 : 12
 
         b.x = nextX
-        b.vx = clamp(effSpeed * Math.cos(launchAngle) * (cur.island ? 1.15 : 1.0), 90, 230)
+        b.vx = clamp(effSpeed * Math.cos(launchAngle) * (cur.island ? 1.16 : 1.05), 110, 235)
         b.vy = effSpeed * Math.sin(launchAngle) - liftBonus
         b.y = cur.y - 7
-        b.angVel = isPressing ? -2.4 : 0
+        b.angVel = isPressing ? -2.5 : 0
       } else {
         b.x = nextX
         b.y = next.y - 6
@@ -649,8 +649,8 @@ export function createGameEngine(initialSeed = 20261110) {
       b.vy += gravity * dt
       b.y += b.vy * dt
 
-      const maxSpin = state.turboFlip ? 10.6 : 8.6
-      const spinAcc = state.turboFlip ? 38.0 : 29.0
+      const maxSpin = state.turboFlip ? 10.6 : 8.8
+      const spinAcc = state.turboFlip ? 38.0 : 30.0
 
       if (isPressing) {
         b.angVel = Math.max(-maxSpin, b.angVel - spinAcc * dt)
@@ -696,7 +696,7 @@ export function createGameEngine(initialSeed = 20261110) {
         b.angVel = 0
 
         const impactSpeed = Math.hypot(b.vx, b.vy)
-        const minLandSpeed = ground.island ? 158 : 118
+        const minLandSpeed = ground.island ? 164 : 118
         b.speed = clamp(Math.max(b.speed, impactSpeed * 0.9), minLandSpeed, maxSpeed)
 
         if (b.airFlips > 0) {
