@@ -3,13 +3,30 @@ import fs from 'fs'
 
 const source = fs.readFileSync(new URL('../src/common/engine.js', import.meta.url), 'utf8')
 const moduleUrl = 'data:text/javascript;base64,' + Buffer.from(source, 'utf8').toString('base64')
-const { createGameEngine, CHART_POINTS, VIEW_H } = await import(moduleUrl)
+const {
+  createGameEngine,
+  computeRainbowTrackColor,
+  RAINBOW_COLORS,
+  SECTION_LENGTH,
+  CHART_POINTS,
+  VIEW_H
+} = await import(moduleUrl)
+
+assert.strictEqual(RAINBOW_COLORS.length, 7)
+for (let i = 0; i < 7; i++) {
+  const cStart = computeRainbowTrackColor(i * SECTION_LENGTH + 50)
+  const cMid = computeRainbowTrackColor(i * SECTION_LENGTH + 600)
+  assert.strictEqual(cStart, RAINBOW_COLORS[i])
+  assert.strictEqual(cMid, RAINBOW_COLORS[i])
+}
 
 const engine = createGameEngine(1337)
 engine.startGame()
 
 assert.strictEqual(engine.state.status, 'playing')
 assert.strictEqual(engine.state.chartData.length, CHART_POINTS)
+assert(engine.state.loops.length >= 1)
+assert(engine.state.hazards.length >= 1)
 
 let prevSpeed = engine.state.bike.speed
 for (let i = 0; i < 18; i++) {
@@ -40,15 +57,17 @@ const proBot = createGameEngine(2026)
 proBot.startGame()
 let flipsDone = 0
 let landingsDone = 0
+let loopsCompleted = 0
 for (let i = 0; i < 3000; i++) {
   if (proBot.state.status !== 'playing') {
     proBot.startGame()
   }
   const b = proBot.state.bike
-  const hold = b.onGround || b.airFlips < 1
+  const hold = b.onGround || b.inLoop || b.airFlips < 1
   const res = proBot.step(0.016, hold)
   if (res.event === 'flip') flipsDone += 1
   if (res.event === 'land') landingsDone += 1
+  if (proBot.state.bannerText === 'ПЕТЛЯ +5') loopsCompleted += 1
 
   const snap = proBot.getRenderSnapshot()
   for (let j = 0; j < snap.chartData.length; j++) {
@@ -57,4 +76,9 @@ for (let i = 0; i < 3000; i++) {
 }
 assert(flipsDone >= 15)
 assert(landingsDone >= 15)
-console.log('ENGINE_V5_ALL_TESTS_PASSED_OK', { flipsDone, landingsDone })
+assert(loopsCompleted >= 1)
+console.log('ENGINE_V7_ALL_TESTS_PASSED_OK', {
+  flipsDone,
+  landingsDone,
+  loopsCompleted
+})
