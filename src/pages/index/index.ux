@@ -11,22 +11,31 @@
         <text class="hud-info">{{ infoText }}</text>
       </div>
 
-      <stack class="viewport">
+      <stack class="viewport" style="width: {{ viewW }}px; height: {{ viewH }}px;">
         <chart
           class="track-chart"
+          style="width: {{ viewW }}px; height: {{ viewH }}px;"
           type="line"
           options="{{ lineOpts }}"
           datasets="{{ lineData }}"
         ></chart>
 
-        <div class="sprite-layer">
+        <div class="sprite-layer" style="width: {{ viewW }}px; height: {{ viewH }}px;">
           <div
             class="saw-node"
             style="left: {{ hazX }}px; top: {{ hazY }}px;"
           ></div>
           <div
+            class="saw-node"
+            style="left: {{ haz2X }}px; top: {{ haz2Y }}px;"
+          ></div>
+          <div
             class="gem-node"
             style="left: {{ gemX }}px; top: {{ gemY }}px;"
+          ></div>
+          <div
+            class="gem-node"
+            style="left: {{ gem2X }}px; top: {{ gem2Y }}px;"
           ></div>
           <div
             class="bike-wheel"
@@ -59,19 +68,29 @@
 
     <div class="overlay-screen" if="{{ showSettings }}">
       <text class="cfg-title">НАСТРОЙКИ</text>
-      <text class="cfg-item" onclick="onCycleZoom">МАСШТАБ: {{ zoomLabel }}</text>
-      <text class="cfg-item" onclick="onCycleDifficulty">СЛОЖНОСТЬ: {{ diffLabel }}</text>
-      <text class="cfg-item" onclick="onCycleObstacles">РЕЖИМ: {{ obsLabel }}</text>
-      <text class="cfg-item" onclick="onToggleSpin">ВРАЩЕНИЕ: {{ spinLabel }}</text>
-      <text class="cfg-item" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
-      <text class="cfg-item" onclick="onToggleFps">ПОКАЗ FPS: {{ fpsLabel }}</text>
-      <text class="cfg-item-warn" onclick="onResetBest">{{ resetLabel }}</text>
+      <div class="cfg-row">
+        <text class="cfg-cell" onclick="onCycleZoom">ЗУМ: {{ zoomLabel }}</text>
+        <text class="cfg-cell" onclick="onCycleDifficulty">СЛОЖ: {{ diffLabel }}</text>
+      </div>
+      <div class="cfg-row">
+        <text class="cfg-cell" onclick="onCycleObstacles">РЕЖ: {{ obsLabel }}</text>
+        <text class="cfg-cell" onclick="onToggleSpin">ВРАЩ: {{ spinLabel }}</text>
+      </div>
+      <div class="cfg-row">
+        <text class="cfg-cell" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
+        <text class="cfg-cell" onclick="onToggleFps">FPS: {{ fpsLabel }}</text>
+      </div>
+      <div class="cfg-row">
+        <text class="cfg-cell" onclick="onCycleScreenMode">ЭКР: {{ screenLabel }}</text>
+        <text class="cfg-cell-warn" onclick="onResetBest">{{ resetLabel }}</text>
+      </div>
       <text class="retry-btn" onclick="onCloseSettings">ИГРАТЬ</text>
     </div>
   </stack>
 </template>
 
 <script>
+import device from '@system.device'
 import storage from '@system.storage'
 import vibrator from '@system.vibrator'
 import brightness from '@system.brightness'
@@ -95,7 +114,7 @@ export default {
     score: 0,
     bestScore: 0,
     gems: 0,
-    infoText: 'УДЕРЖИВАЙ НИЗ ЭКРАНА',
+    infoText: 'УДЕРЖИВАЙ ЭКРАН',
     fpsText: 'READY',
     isHolding: false,
     showMenuBtn: true,
@@ -112,9 +131,14 @@ export default {
     diffLabel: 'НОРМ',
     obstacleMode: 0,
     obsLabel: 'ВСЕ',
+    screenMode: 0,
+    screenLabel: 'АВТО',
+    detectedProfile: 1,
+    viewW: 200,
+    viewH: 300,
     showFps: true,
     fpsLabel: 'ВКЛ',
-    resetLabel: 'СБРОС РЕКОРДА',
+    resetLabel: 'СБРОС',
     rx: 34,
     ry: 168,
     cx: 44,
@@ -123,8 +147,12 @@ export default {
     fy: 168,
     gemX: -40,
     gemY: -40,
+    gem2X: -40,
+    gem2Y: -40,
     hazX: -50,
     hazY: -50,
+    haz2X: -50,
+    haz2Y: -50,
     lineOpts: {
       xAxis: {
         min: 0,
@@ -150,6 +178,7 @@ export default {
 
   onInit() {
     engineInstance = createGameEngine(Date.now() & 0xffffffff)
+    this.detectDeviceScreen()
     this.syncView(engineInstance.getRenderSnapshot(), true)
     this.loadSavedData()
   },
@@ -184,6 +213,32 @@ export default {
     } catch (e) {}
   },
 
+  detectDeviceScreen() {
+    try {
+      if (device && typeof device.getInfo === 'function') {
+        device.getInfo({
+          success: (info) => {
+            if (info && info.screenWidth && info.screenHeight) {
+              const ratio = info.screenHeight / info.screenWidth
+              const shape = String(info.screenShape || '').toLowerCase()
+              if (shape === 'circle' || shape === 'round' || ratio < 1.15) {
+                this.detectedProfile = 3
+              } else if (ratio < 1.85) {
+                this.detectedProfile = 2
+              } else {
+                this.detectedProfile = 1
+              }
+              this.applyEngineSettings()
+              if (engineInstance) {
+                this.syncView(engineInstance.getRenderSnapshot(), true)
+              }
+            }
+          }
+        })
+      }
+    } catch (e) {}
+  },
+
   applyEngineSettings() {
     if (!engineInstance) return
     engineInstance.state.turboFlip = this.turboSpin
@@ -192,12 +247,27 @@ export default {
       this.zoomMode === 0 ? 1.0 : this.zoomMode === 1 ? 0.72 : 1.28
     engineInstance.state.difficultyMode = this.difficultyMode
     engineInstance.state.obstacleMode = this.obstacleMode
+
+    const activeProfile =
+      this.screenMode === 0 ? this.detectedProfile : this.screenMode
+    let targetW = 200
+    let targetH = 300
+    if (activeProfile === 2) {
+      targetW = 196
+      targetH = 188
+    } else if (activeProfile === 3) {
+      targetW = 176
+      targetH = 136
+    }
+    this.viewW = targetW
+    this.viewH = targetH
+    engineInstance.setViewport(targetW, targetH)
   },
 
   loadSavedData() {
     try {
       storage.get({
-        key: 'rider_band10_v9',
+        key: 'com_band_rider_v10',
         success: (data) => {
           if (data) {
             try {
@@ -238,8 +308,19 @@ export default {
                   this.obstacleMode === 0
                     ? 'ВСЕ'
                     : this.obstacleMode === 1
-                    ? 'БЕЗ ПИЛ'
-                    : 'ФРИРАЙД'
+                    ? 'ЯМЫ'
+                    : 'ФРИ'
+              }
+              if (typeof parsed.scr === 'number') {
+                this.screenMode = parsed.scr % 4
+                this.screenLabel =
+                  this.screenMode === 0
+                    ? 'АВТО'
+                    : this.screenMode === 1
+                    ? 'КАПС'
+                    : this.screenMode === 2
+                    ? 'ЧАСЫ'
+                    : 'КРУГ'
               }
               if (typeof parsed.showFps === 'boolean') {
                 this.showFps = parsed.showFps
@@ -257,7 +338,7 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'rider_band10_v9',
+        key: 'com_band_rider_v10',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
@@ -266,6 +347,7 @@ export default {
           zoom: this.zoomMode,
           diff: this.difficultyMode,
           obs: this.obstacleMode,
+          scr: this.screenMode,
           showFps: this.showFps
         })
       })
@@ -355,8 +437,12 @@ export default {
 
     if (this.gemX !== snap.gemX) this.gemX = snap.gemX
     if (this.gemY !== snap.gemY) this.gemY = snap.gemY
+    if (this.gem2X !== snap.gem2X) this.gem2X = snap.gem2X
+    if (this.gem2Y !== snap.gem2Y) this.gem2Y = snap.gem2Y
     if (this.hazX !== snap.hazX) this.hazX = snap.hazX
     if (this.hazY !== snap.hazY) this.hazY = snap.hazY
+    if (this.haz2X !== snap.haz2X) this.haz2X = snap.haz2X
+    if (this.haz2Y !== snap.haz2Y) this.haz2Y = snap.haz2Y
 
     if (this.score !== snap.score) this.score = snap.score
     if (this.bestScore !== snap.bestScore) this.bestScore = snap.bestScore
@@ -364,7 +450,7 @@ export default {
 
     const nextInfo = snap.bannerText
       ? snap.bannerText
-      : 'РЕКОРД ' + snap.bestScore + '  |  КРИСТ ' + snap.gems
+      : 'РЕК ' + snap.bestScore + '  |  КРИСТ ' + snap.gems
     if (this.infoText !== nextInfo) {
       this.infoText = nextInfo
     }
@@ -402,7 +488,7 @@ export default {
   onOpenSettings() {
     this.isHolding = false
     this.stopLoop()
-    this.resetLabel = 'СБРОС РЕКОРДА'
+    this.resetLabel = 'СБРОС'
     this.showSettings = true
     this.pulseHaptic('short')
   },
@@ -447,9 +533,25 @@ export default {
       this.obstacleMode === 0
         ? 'ВСЕ'
         : this.obstacleMode === 1
-        ? 'БЕЗ ПИЛ'
-        : 'ФРИРАЙД'
+        ? 'ЯМЫ'
+        : 'ФРИ'
     this.applyEngineSettings()
+    this.pulseHaptic('short')
+    this.saveProgress()
+  },
+
+  onCycleScreenMode() {
+    this.screenMode = (this.screenMode + 1) % 4
+    this.screenLabel =
+      this.screenMode === 0
+        ? 'АВТО'
+        : this.screenMode === 1
+        ? 'КАПС'
+        : this.screenMode === 2
+        ? 'ЧАСЫ'
+        : 'КРУГ'
+    this.applyEngineSettings()
+    this.syncView(engineInstance.getRenderSnapshot(), true)
     this.pulseHaptic('short')
     this.saveProgress()
   },
@@ -479,7 +581,7 @@ export default {
   onResetBest() {
     this.bestScore = 0
     this.gems = 0
-    this.resetLabel = 'СБРОШЕНО!'
+    this.resetLabel = 'ОК!'
     if (engineInstance) {
       engineInstance.state.bestScore = 0
       engineInstance.state.gems = 0
@@ -493,14 +595,14 @@ export default {
 
 <style>
 .screen {
-  width: 212px;
-  height: 520px;
+  width: 100%;
+  height: 100%;
   background-color: #000000;
 }
 
 .game-layout {
-  width: 212px;
-  height: 520px;
+  width: 100%;
+  height: 100%;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
@@ -508,24 +610,24 @@ export default {
 }
 
 .hud-top {
-  width: 184px;
-  height: 92px;
-  margin-top: 14px;
+  width: 180px;
+  height: 54px;
+  margin-top: 6px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
 .hud-score {
-  font-size: 38px;
+  font-size: 28px;
   color: #FFFFFF;
   text-align: center;
 }
 
 .hud-info {
-  font-size: 14px;
+  font-size: 12px;
   color: #CCCCCC;
-  margin-top: 4px;
+  margin-top: 2px;
   text-align: center;
 }
 
@@ -546,31 +648,31 @@ export default {
 }
 
 .bottom-bar {
-  width: 212px;
-  height: 108px;
+  width: 180px;
+  height: 54px;
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
-  padding-bottom: 14px;
+  padding-bottom: 6px;
 }
 
 .menu-btn {
-  width: 136px;
-  height: 38px;
-  border-radius: 19px;
+  width: 124px;
+  height: 30px;
+  border-radius: 15px;
   border-width: 2px;
   border-color: #FFFFFF;
   background-color: #121212;
-  font-size: 15px;
+  font-size: 13px;
   color: #FFFFFF;
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .fps-counter {
-  width: 100px;
-  height: 20px;
-  font-size: 13px;
+  width: 96px;
+  height: 16px;
+  font-size: 11px;
   color: #777777;
   text-align: center;
 }
@@ -617,8 +719,8 @@ export default {
   position: absolute;
   left: 0px;
   top: 0px;
-  width: 212px;
-  height: 520px;
+  width: 100%;
+  height: 100%;
   background-color: #000000;
   flex-direction: column;
   justify-content: center;
@@ -626,79 +728,85 @@ export default {
 }
 
 .crash-title {
-  font-size: 26px;
-  color: #FFFFFF;
-  margin-bottom: 12px;
-}
-
-.crash-stat {
   font-size: 22px;
-  color: #EAEAEA;
+  color: #FFFFFF;
   margin-bottom: 6px;
 }
 
+.crash-stat {
+  font-size: 18px;
+  color: #EAEAEA;
+  margin-bottom: 4px;
+}
+
 .crash-best {
-  font-size: 14px;
+  font-size: 12px;
   color: #999999;
-  margin-bottom: 26px;
+  margin-bottom: 12px;
 }
 
 .retry-btn {
-  width: 164px;
-  height: 42px;
-  border-radius: 21px;
+  width: 148px;
+  height: 34px;
+  border-radius: 17px;
   border-width: 2px;
   border-color: #FFFFFF;
   background-color: #FFFFFF;
-  font-size: 16px;
+  font-size: 14px;
   color: #000000;
   text-align: center;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .sub-btn {
-  width: 152px;
-  height: 42px;
-  border-radius: 21px;
+  width: 140px;
+  height: 32px;
+  border-radius: 16px;
   border-width: 2px;
   border-color: #666666;
   background-color: #121212;
-  font-size: 15px;
+  font-size: 13px;
   color: #FFFFFF;
   text-align: center;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .cfg-title {
-  font-size: 19px;
+  font-size: 15px;
   color: #FFFFFF;
   margin-bottom: 4px;
 }
 
-.cfg-item {
+.cfg-row {
   width: 178px;
-  height: 32px;
-  border-radius: 16px;
+  height: 28px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 3px;
+}
+
+.cfg-cell {
+  width: 86px;
+  height: 26px;
+  border-radius: 13px;
   border-width: 2px;
   border-color: #555555;
   background-color: #101010;
-  font-size: 13px;
+  font-size: 11px;
   color: #FFFFFF;
   text-align: center;
-  margin-top: 4px;
 }
 
-.cfg-item-warn {
-  width: 178px;
-  height: 32px;
-  border-radius: 16px;
+.cfg-cell-warn {
+  width: 86px;
+  height: 26px;
+  border-radius: 13px;
   border-width: 2px;
   border-color: #444444;
   background-color: #080808;
-  font-size: 13px;
+  font-size: 11px;
   color: #AAAAAA;
   text-align: center;
-  margin-top: 4px;
-  margin-bottom: 2px;
 }
 </style>
