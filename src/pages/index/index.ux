@@ -21,6 +21,10 @@
 
         <div class="sprite-layer">
           <div
+            class="loop-node"
+            style="left: {{ loopX }}px; top: {{ loopY }}px;"
+          ></div>
+          <div
             class="saw-node"
             style="left: {{ hazX }}px; top: {{ hazY }}px;"
           ></div>
@@ -124,6 +128,8 @@ export default {
     gemY: -40,
     hazX: -50,
     hazY: -50,
+    loopX: -140,
+    loopY: -140,
     lineOpts: {
       xAxis: {
         min: 0,
@@ -356,6 +362,8 @@ export default {
     if (this.gemY !== snap.gemY) this.gemY = snap.gemY
     if (this.hazX !== snap.hazX) this.hazX = snap.hazX
     if (this.hazY !== snap.hazY) this.hazY = snap.hazY
+    if (this.loopX !== snap.loopX) this.loopX = snap.loopX
+    if (this.loopY !== snap.loopY) this.loopY = snap.loopY
 
     if (this.score !== snap.score) this.score = snap.score
     if (this.bestScore !== snap.bestScore) this.bestScore = snap.bestScore
@@ -576,6 +584,15 @@ export default {
   font-size: 13px;
   color: #777777;
   text-align: center;
+}
+
+.loop-node {
+  position: absolute;
+  width: 84px;
+  height: 84px;
+  border-radius: 42px;
+  border-width: 3px;
+  border-color: #FFFFFF;
 }
 
 .saw-node {
