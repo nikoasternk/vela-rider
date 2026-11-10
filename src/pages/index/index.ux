@@ -21,10 +21,6 @@
 
         <div class="sprite-layer">
           <div
-            class="loop-node"
-            style="left: {{ loopX }}px; top: {{ loopY }}px;"
-          ></div>
-          <div
             class="saw-node"
             style="left: {{ hazX }}px; top: {{ hazY }}px;"
           ></div>
@@ -67,7 +63,8 @@
       <text class="cfg-item" onclick="onCycleDifficulty">СЛОЖНОСТЬ: {{ diffLabel }}</text>
       <text class="cfg-item" onclick="onCycleObstacles">РЕЖИМ: {{ obsLabel }}</text>
       <text class="cfg-item" onclick="onToggleSpin">ВРАЩЕНИЕ: {{ spinLabel }}</text>
-      <text class="cfg-item" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}  |  FPS: {{ fpsLabel }}</text>
+      <text class="cfg-item" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
+      <text class="cfg-item" onclick="onToggleFps">ПОКАЗ FPS: {{ fpsLabel }}</text>
       <text class="cfg-item-warn" onclick="onResetBest">{{ resetLabel }}</text>
       <text class="retry-btn" onclick="onCloseSettings">ИГРАТЬ</text>
     </div>
@@ -128,8 +125,6 @@ export default {
     gemY: -40,
     hazX: -50,
     hazY: -50,
-    loopX: -140,
-    loopY: -140,
     lineOpts: {
       xAxis: {
         min: 0,
@@ -202,7 +197,7 @@ export default {
   loadSavedData() {
     try {
       storage.get({
-        key: 'rider_band10_v8',
+        key: 'rider_band10_v9',
         success: (data) => {
           if (data) {
             try {
@@ -262,7 +257,7 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'rider_band10_v8',
+        key: 'rider_band10_v9',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
@@ -362,8 +357,6 @@ export default {
     if (this.gemY !== snap.gemY) this.gemY = snap.gemY
     if (this.hazX !== snap.hazX) this.hazX = snap.hazX
     if (this.hazY !== snap.hazY) this.hazY = snap.hazY
-    if (this.loopX !== snap.loopX) this.loopX = snap.loopX
-    if (this.loopY !== snap.loopY) this.loopY = snap.loopY
 
     if (this.score !== snap.score) this.score = snap.score
     if (this.bestScore !== snap.bestScore) this.bestScore = snap.bestScore
@@ -470,20 +463,16 @@ export default {
   },
 
   onToggleVibro() {
-    if (this.vibroEnabled && this.showFps) {
-      this.showFps = false
-    } else if (this.vibroEnabled && !this.showFps) {
-      this.vibroEnabled = false
-      this.showFps = true
-    } else if (!this.vibroEnabled && this.showFps) {
-      this.showFps = false
-    } else {
-      this.vibroEnabled = true
-      this.showFps = true
-    }
+    this.vibroEnabled = !this.vibroEnabled
     this.vibroLabel = this.vibroEnabled ? 'ВКЛ' : 'ВЫКЛ'
-    this.fpsLabel = this.showFps ? 'ВКЛ' : 'ВЫКЛ'
     if (this.vibroEnabled) this.pulseHaptic('short')
+    this.saveProgress()
+  },
+
+  onToggleFps() {
+    this.showFps = !this.showFps
+    this.fpsLabel = this.showFps ? 'ВКЛ' : 'ВЫКЛ'
+    this.pulseHaptic('short')
     this.saveProgress()
   },
 
@@ -586,15 +575,6 @@ export default {
   text-align: center;
 }
 
-.loop-node {
-  position: absolute;
-  width: 84px;
-  height: 84px;
-  border-radius: 42px;
-  border-width: 3px;
-  border-color: #FFFFFF;
-}
-
 .saw-node {
   position: absolute;
   width: 26px;
@@ -665,15 +645,15 @@ export default {
 
 .retry-btn {
   width: 164px;
-  height: 46px;
-  border-radius: 23px;
+  height: 42px;
+  border-radius: 21px;
   border-width: 2px;
   border-color: #FFFFFF;
   background-color: #FFFFFF;
-  font-size: 17px;
+  font-size: 16px;
   color: #000000;
   text-align: center;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .sub-btn {
@@ -690,35 +670,35 @@ export default {
 }
 
 .cfg-title {
-  font-size: 20px;
+  font-size: 19px;
   color: #FFFFFF;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .cfg-item {
   width: 178px;
-  height: 36px;
-  border-radius: 18px;
+  height: 32px;
+  border-radius: 16px;
   border-width: 2px;
   border-color: #555555;
   background-color: #101010;
   font-size: 13px;
   color: #FFFFFF;
   text-align: center;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 
 .cfg-item-warn {
   width: 178px;
-  height: 34px;
-  border-radius: 17px;
+  height: 32px;
+  border-radius: 16px;
   border-width: 2px;
   border-color: #444444;
   background-color: #080808;
   font-size: 13px;
   color: #AAAAAA;
   text-align: center;
-  margin-top: 6px;
+  margin-top: 4px;
   margin-bottom: 2px;
 }
 </style>
