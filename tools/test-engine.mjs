@@ -1,5 +1,9 @@
 import assert from 'assert'
-import { createGameEngine, THEMES } from '../src/common/engine.js'
+import fs from 'fs'
+
+const source = fs.readFileSync(new URL('../src/common/engine.js', import.meta.url), 'utf8')
+const moduleUrl = 'data:text/javascript;base64,' + Buffer.from(source, 'utf8').toString('base64')
+const { createGameEngine, THEMES } = await import(moduleUrl)
 
 const engine = createGameEngine(1337)
 engine.startGame()
@@ -26,5 +30,5 @@ assert(engine.state.bike.airRotation > 3.0)
 const snap = engine.getRenderSnapshot()
 assert.strictEqual(snap.columns.length, 21)
 assert.strictEqual(snap.particles.length, 6)
-assert.strictEqual(snap.gems.length, 2)
+assert.strictEqual(snap.gemsView.length, 2)
 console.log('ENGINE_VERIFIED_OK')
