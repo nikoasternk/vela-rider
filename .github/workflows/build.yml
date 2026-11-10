@@ -1,4 +1,4 @@
-name: Build Xiaomi Smart Band 10 RPK
+name: Build and Release RPK
 
 on:
   push:
@@ -7,11 +7,13 @@ on:
       - master
     tags:
       - "v*"
-  pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build-rpk:
+  release-rpk:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -25,29 +27,27 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Generate signing certificates
+      - name: Generate release signing certificates
         run: |
-          mkdir -p sign/debug sign/release
-          if [ ! -f sign/debug/private.pem ]; then
-            openssl req -newkey rsa:2048 -nodes -keyout sign/debug/private.pem -x509 -days 3650 -out sign/debug/certificate.pem -subj "/C=CN/ST=Beijing/L=Beijing/O=Xiaomi/OU=Vela/CN=com.vela.rider.band10"
-          fi
-          if [ ! -f sign/release/private.pem ]; then
-            cp sign/debug/private.pem sign/release/private.pem
-            cp sign/debug/certificate.pem sign/release/certificate.pem
-          fi
+          mkdir -p sign/release sign/debug
+          openssl req -newkey rsa:2048 -nodes -keyout sign/release/private.pem -x509 -days 3650 -out sign/release/certificate.pem -subj "/C=CN/ST=Beijing/L=Beijing/O=Xiaomi/OU=Vela/CN=com.vela.rider.band10"
+          cp sign/release/private.pem sign/private.pem
+          cp sign/release/certificate.pem sign/certificate.pem
+          cp sign/release/private.pem sign/debug/private.pem
+          cp sign/release/certificate.pem sign/debug/certificate.pem
 
       - name: Generate assets and run physics verification
         run: npm test
 
-      - name: Build Debug RPK
-        run: npm run build
-
       - name: Build Release RPK
         run: npm run release
 
-      - name: Upload RPK Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Publish RPK to GitHub Releases
+        uses: softprops/action-gh-release@v2
         with:
-          name: rider-band10-rpk
-          path: dist/*.rpk
-          if-no-files-found: error
+          tag_name: v1.0.${{ github.run_number }}
+          name: Rider Band 10 v1.0.${{ github.run_number }}
+          files: dist/*.rpk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
