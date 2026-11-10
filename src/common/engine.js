@@ -159,62 +159,65 @@ export function createGameEngine(initialSeed = 20261110) {
     const allowSaws = state.obstacleMode === 0
 
     if (r < 0.25) {
-      addSegment(75, 0.55, false, false, 0, false)
-      addSegment(65, 0.0, false, false, 0, false)
-      addSegment(75, -0.68, false, false, 0, false)
+      addSegment(80, 0.68, false, false, 0, false)
+      addSegment(70, 0.0, false, false, 0, false)
+      addSegment(85, -0.80, true, false, 0, false)
+      const lipX = state.lastX
+      const lipY = state.lastY
+      addSegment(55, 1.02, false, allowAbyss, lipY, false)
+      addSegment(55, 0.0, false, allowAbyss, lipY, false)
       const bridgeStart = state.lastX
-      const bridgeY = state.lastY
+      addSegment(80, 0.35, false, false, 0, false)
       addSegment(80, 0.0, false, false, 0, false)
-      addSegment(80, 0.58, false, false, 0, false)
-      addSegment(75, 0.0, false, false, 0, false)
       state.loops.push({
         cx: bridgeStart,
         span: 160,
-        slideOffset: 68,
+        slideOffset: 64,
         switched: false,
         completed: false
       })
       state.worldGems.push({
-        x: bridgeStart + 40,
-        y: bridgeY - 26,
+        x: lipX + 65,
+        y: lipY - 44,
         taken: false
       })
     } else if (r < 0.52) {
-      addSegment(80, 0.72, false, false, 0, false)
-      addSegment(65, 0.0, false, false, 0, false)
-      addSegment(80, -0.78, true, false, 0, false)
+      addSegment(85, 0.75, false, false, 0, false)
+      addSegment(70, 0.0, false, false, 0, false)
+      addSegment(85, -0.80, true, false, 0, false)
       const lipX = state.lastX
       const lipY = state.lastY
-      addSegment(52, 0.95, false, allowAbyss, lipY, false)
-      addSegment(52, -0.85, false, allowAbyss, lipY, false)
-      addSegment(50, 0.0, false, false, 0, true)
-      addSegment(55, -0.68, true, false, 0, true)
+      addSegment(55, 1.05, false, allowAbyss, lipY, false)
+      addSegment(55, 0.0, false, allowAbyss, lipY, false)
+      addSegment(75, 0.35, false, false, 0, true)
+      addSegment(65, 0.0, false, false, 0, true)
+      addSegment(85, -0.78, true, false, 0, true)
       const lip2Y = state.lastY
-      addSegment(50, 0.92, false, allowAbyss, lip2Y, false)
+      addSegment(55, 1.02, false, allowAbyss, lip2Y, false)
       addSegment(55, 0.0, false, allowAbyss, lip2Y, false)
       addSegment(85, 0.35, false, false, 0, false)
       addSegment(75, 0.0, false, false, 0, false)
       state.worldGems.push({
-        x: lipX + 128,
-        y: lipY - 34,
+        x: lipX + 65,
+        y: lipY - 44,
         taken: false
       })
     } else if (r < 0.78) {
-      addSegment(80, 0.65, false, false, 0, false)
-      addSegment(65, 0.0, false, false, 0, false)
+      addSegment(85, 0.72, false, false, 0, false)
+      addSegment(70, 0.0, false, false, 0, false)
       addSegment(85, -0.82, true, false, 0, false)
       const lipX = state.lastX
       const lipY = state.lastY
-      addSegment(60, 1.15, false, allowAbyss, lipY, false)
+      addSegment(58, 1.15, false, allowAbyss, lipY, false)
       const pitX = state.lastX
       const pitY = state.lastY
-      addSegment(60, -0.95, false, allowAbyss, lipY, false)
-      addSegment(80, 0.38, false, false, 0, false)
+      addSegment(58, 0.0, false, allowAbyss, lipY, false)
+      addSegment(85, 0.38, false, false, 0, false)
       addSegment(80, 0.0, false, false, 0, false)
       if (allowSaws) {
         state.hazards.push({
           x: pitX,
-          y: pitY - 8,
+          y: pitY + 26,
           r: 14
         })
       }
@@ -224,28 +227,27 @@ export function createGameEngine(initialSeed = 20261110) {
         taken: false
       })
     } else {
-      addSegment(75, 0.55, false, false, 0, false)
-      addSegment(65, 0.0, false, false, 0, false)
-      addSegment(75, -0.75, true, false, 0, false)
-      const kickX = state.lastX
-      const kickY = state.lastY
-      addSegment(55, 0.78, false, false, 0, false)
-      const dipX = state.lastX
-      const dipY = state.lastY
-      addSegment(55, 0.0, false, false, 0, false)
-      addSegment(80, -0.68, true, false, 0, false)
-      addSegment(80, 0.42, false, false, 0, false)
+      addSegment(95, 0.85, false, false, 0, false)
       addSegment(75, 0.0, false, false, 0, false)
+      addSegment(85, -0.84, true, false, 0, false)
+      const lipX = state.lastX
+      const lipY = state.lastY
+      addSegment(56, 1.08, false, allowAbyss, lipY, false)
+      const sawX = state.lastX
+      const sawY = state.lastY
+      addSegment(56, 0.0, false, allowAbyss, lipY, false)
+      addSegment(85, 0.36, false, false, 0, false)
+      addSegment(80, 0.0, false, false, 0, false)
       if (allowSaws) {
         state.hazards.push({
-          x: dipX,
-          y: dipY + 6,
+          x: sawX,
+          y: sawY + 28,
           r: 14
         })
       }
       state.worldGems.push({
-        x: kickX + 55,
-        y: kickY - 40,
+        x: lipX + 62,
+        y: lipY - 48,
         taken: false
       })
     }
@@ -300,7 +302,7 @@ export function createGameEngine(initialSeed = 20261110) {
           y,
           m,
           angle: Math.atan2(m, 1),
-          kicker: s.kicker && u > 0.82,
+          kicker: s.kicker && u > 0.84,
           abyss: s.abyss,
           island: s.island,
           lipY: s.lipY
@@ -416,29 +418,23 @@ export function createGameEngine(initialSeed = 20261110) {
     if (allowSaws) {
       state.hazards.push({
         x: firstLipX + 55,
-        y: firstLipY + 26,
+        y: firstLipY + 34,
         r: 14
       })
     }
-    addSegment(80, 0.35, false, false, 0, false)
-    addSegment(75, 0.0, false, false, 0, false)
-
-    addSegment(70, -0.62, false, false, 0, false)
     const bridgeStart = state.lastX
-    const bridgeY = state.lastY
-    addSegment(80, 0.0, false, false, 0, false)
-    addSegment(80, 0.55, false, false, 0, false)
+    addSegment(80, 0.35, false, false, 0, false)
     addSegment(75, 0.0, false, false, 0, false)
     state.loops.push({
       cx: bridgeStart,
-      span: 160,
-      slideOffset: 68,
+      span: 155,
+      slideOffset: 64,
       switched: false,
       completed: false
     })
     state.worldGems.push({
-      x: bridgeStart + 40,
-      y: bridgeY - 26,
+      x: firstLipX + 60,
+      y: firstLipY - 42,
       taken: false
     })
 
@@ -511,16 +507,14 @@ export function createGameEngine(initialSeed = 20261110) {
 
     for (let i = 0; i < state.loops.length; i++) {
       const lp = state.loops[i]
-      if (!lp.switched && b.x >= lp.cx - 55) {
+      if (!lp.switched && b.x >= lp.cx - 115) {
         lp.switched = true
-        b.inLoop = true
       }
       if (lp.switched && lp.slideOffset > 0) {
         lp.slideOffset = Math.max(0, lp.slideOffset - 240 * dt)
       }
-      if (!lp.completed && b.x >= lp.cx + 45) {
+      if (!lp.completed && b.x >= lp.cx + 25) {
         lp.completed = true
-        b.inLoop = false
         state.score += 5
         state.bannerText = 'ПЕТЛЯ +5'
         state.bannerTimer = 0.85
@@ -593,12 +587,6 @@ export function createGameEngine(initialSeed = 20261110) {
         b.angVel = Math.max(-maxSpin, b.angVel - spinAcc * dt)
       } else {
         b.angVel *= Math.max(0, 1 - 16.0 * dt)
-        if (b.airFlips > 0) {
-          const gTarget = sampleTerrain(b.x)
-          const targetAngle = gTarget.abyss ? 0.25 : gTarget.angle
-          const assistRate = state.difficultyMode === 0 ? 11.0 : 7.5
-          b.angle += normalizeAngle(targetAngle - b.angle) * Math.min(1, assistRate * dt)
-        }
       }
 
       const dTheta = b.angVel * dt
@@ -668,7 +656,7 @@ export function createGameEngine(initialSeed = 20261110) {
       const h = state.hazards[i]
       const dx = h.x - b.x
       const dy = h.y - b.y
-      if (dx * dx + dy * dy < 320) {
+      if (dx * dx + dy * dy < 260) {
         triggerCrash('ПИЛА!')
         return { event: 'crash' }
       }
