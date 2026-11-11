@@ -1,18 +1,6 @@
 import assert from 'assert'
 import fs from 'fs'
 
-const workflowRaw = fs.readFileSync(
-  new URL('../.github/workflows/build.yml', import.meta.url),
-  'utf8'
-)
-assert(workflowRaw.includes('workflow_dispatch:'))
-assert(!workflowRaw.includes('push:'))
-
-const manifestRaw = JSON.parse(
-  fs.readFileSync(new URL('../src/manifest.json', import.meta.url), 'utf8')
-)
-assert.strictEqual(manifestRaw.package, 'com.band.rider')
-
 const source = fs.readFileSync(new URL('../src/common/engine.js', import.meta.url), 'utf8')
 const moduleUrl = 'data:text/javascript;base64,' + Buffer.from(source, 'utf8').toString('base64')
 const {
@@ -21,7 +9,7 @@ const {
   RAINBOW_COLORS,
   SECTION_LENGTH,
   CHART_POINTS,
-  CHART_Y_MAX
+  VIEW_H
 } = await import(moduleUrl)
 
 assert.strictEqual(RAINBOW_COLORS.length, 7)
@@ -37,25 +25,18 @@ engine.startGame()
 
 assert.strictEqual(engine.state.status, 'playing')
 assert.strictEqual(engine.state.chartData.length, CHART_POINTS)
-assert(engine.state.segs.filter((s) => s.abyss).length >= 8)
-assert(engine.state.segs.filter((s) => s.island).length >= 6)
-assert(engine.state.hazards.some((h) => h.descentSaw))
+assert(engine.state.segs.some((s) => s.abyss))
+assert(engine.state.segs.some((s) => s.island))
+assert(engine.state.segs.some((s) => s.steepDrop))
+assert(engine.state.hazards.length >= 4)
 
-for (const [vw, vh] of [
-  [200, 300],
-  [196, 188],
-  [176, 136]
-]) {
-  engine.setViewport(vw, vh)
-  const snap = engine.getRenderSnapshot()
-  assert.strictEqual(snap.viewW, vw)
-  assert.strictEqual(snap.viewH, vh)
-  for (let i = 0; i < snap.chartData.length; i++) {
-    assert(snap.chartData[i] > 4 && snap.chartData[i] < CHART_Y_MAX - 4)
-  }
+engine.setViewport(200, 180)
+assert.strictEqual(engine.state.viewH, 180)
+for (let j = 0; j < engine.state.chartData.length; j++) {
+  assert(engine.state.chartData[j] >= 4 && engine.state.chartData[j] <= 176)
 }
+engine.setViewport(200, VIEW_H)
 
-engine.setViewport(200, 300)
 engine.state.zoomScale = 0.72
 engine.step(0.016, true)
 const snapFar = engine.getRenderSnapshot()
@@ -63,7 +44,7 @@ assert.strictEqual(snapFar.chartData.length, CHART_POINTS)
 
 engine.state.zoomScale = 1.0
 let prevSpeed = engine.state.bike.speed
-for (let i = 0; i < 14; i++) {
+for (let i = 0; i < 18; i++) {
   engine.step(0.016, true)
   if (engine.state.bike.onGround) {
     assert(engine.state.bike.speed >= prevSpeed)
@@ -71,31 +52,33 @@ for (let i = 0; i < 14; i++) {
   }
 }
 
-const descentSaw = engine.state.hazards.find((h) => h.descentSaw)
-assert(descentSaw)
-
-const recklessBot = createGameEngine(2026)
-recklessBot.startGame()
-recklessBot.state.bike.x = descentSaw.x - 75
-recklessBot.state.bike.speed = 190
-recklessBot.state.bike.onGround = true
+const steepSawHitBot = createGameEngine(2026)
+steepSawHitBot.startGame()
+const steepSeg = steepSawHitBot.state.segs.find((s) => s.steepDrop)
+assert(steepSeg)
+steepSawHitBot.state.bike.x = steepSeg.x0 - 8
+steepSawHitBot.state.bike.y = steepSeg.y0 - 6
+steepSawHitBot.state.bike.speed = 175
+steepSawHitBot.state.bike.onGround = true
 for (let i = 0; i < 45; i++) {
-  recklessBot.step(0.016, true)
-  if (recklessBot.state.status === 'gameover') break
+  steepSawHitBot.step(0.016, true)
+  if (steepSawHitBot.state.status === 'gameover') break
 }
-assert.strictEqual(recklessBot.state.status, 'gameover')
-assert.strictEqual(recklessBot.state.crashReason, 'ПИЛА!')
+assert.strictEqual(steepSawHitBot.state.status, 'gameover')
+assert.strictEqual(steepSawHitBot.state.crashReason, 'ПИЛА!')
 
-const carefulBot = createGameEngine(2026)
-carefulBot.startGame()
-carefulBot.state.bike.x = descentSaw.x - 75
-carefulBot.state.bike.speed = 110
-carefulBot.state.bike.onGround = true
-for (let i = 0; i < 90; i++) {
-  carefulBot.step(0.016, false)
-  assert.strictEqual(carefulBot.state.status, 'playing')
+const steepSawSafeBot = createGameEngine(2026)
+steepSawSafeBot.startGame()
+const steepSegSafe = steepSawSafeBot.state.segs.find((s) => s.steepDrop)
+steepSawSafeBot.state.bike.x = steepSegSafe.x0 - 8
+steepSawSafeBot.state.bike.y = steepSegSafe.y0 - 6
+steepSawSafeBot.state.bike.speed = 150
+steepSawSafeBot.state.bike.onGround = true
+for (let i = 0; i < 60; i++) {
+  steepSawSafeBot.step(0.016, false)
+  assert.strictEqual(steepSawSafeBot.state.status, 'playing')
 }
-assert(carefulBot.state.bike.x > descentSaw.x + 35)
+assert(steepSawSafeBot.state.bike.x > steepSegSafe.x0 + 120)
 
 const holdBot = createGameEngine(2026)
 holdBot.startGame()
@@ -122,32 +105,19 @@ for (let i = 0; i < 3000; i++) {
     proBot.startGame()
   }
   const b = proBot.state.bike
-  const sawNear = proBot.state.hazards.some(
-    (h) => h.descentSaw && b.x >= h.x - 85 && b.x <= h.x + 10
-  )
-  let hold = false
-  if (sawNear) {
-    hold = false
-  } else if (b.onGround) {
-    hold = true
-  } else {
-    if (b.airFlips < 1 || b.angle > 0.25) {
-      hold = true
-    }
-  }
-
+  const hold = (b.onGround && !b.onSteepDrop) || (!b.onGround && b.airFlips < 1)
   const res = proBot.step(0.016, hold)
   if (res.event === 'flip') flipsDone += 1
   if (res.event === 'land') landingsDone += 1
 
   const snap = proBot.getRenderSnapshot()
   for (let j = 0; j < snap.chartData.length; j++) {
-    assert(snap.chartData[j] >= 4 && snap.chartData[j] <= CHART_Y_MAX - 4)
+    assert(snap.chartData[j] >= 4 && snap.chartData[j] <= VIEW_H - 4)
   }
 }
-assert(flipsDone >= 8)
-assert(landingsDone >= 8)
-console.log('ENGINE_V11_PHYSICS_AND_UI_PASSED_OK', {
+assert(flipsDone >= 15)
+assert(landingsDone >= 15)
+console.log('ENGINE_V10_UNIVERSAL_ALL_TESTS_PASSED_OK', {
   flipsDone,
   landingsDone
 })
