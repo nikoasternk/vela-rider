@@ -74,7 +74,7 @@ steepSawSafeBot.state.bike.x = steepSegSafe.x0 - 8
 steepSawSafeBot.state.bike.y = steepSegSafe.y0 - 6
 steepSawSafeBot.state.bike.speed = 150
 steepSawSafeBot.state.bike.onGround = true
-for (let i = 0; i < 60; i++) {
+for (let i = 0; i < 80; i++) {
   steepSawSafeBot.step(0.016, false)
   assert.strictEqual(steepSawSafeBot.state.status, 'playing')
 }
