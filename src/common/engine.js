@@ -207,7 +207,7 @@ export function createGameEngine(initialSeed = 20261110) {
     }
     state.lastX = x1
     state.lastY = y1
-    state.lastM = 0.16
+    state.lastM = 0.12
   }
 
   function addSmallIsland(width, kickSlope, withGem) {
@@ -228,11 +228,11 @@ export function createGameEngine(initialSeed = 20261110) {
 
   function addIslandChain(islandCount, allowAbyss, allowSaws) {
     for (let i = 0; i < islandCount; i++) {
-      addAbyss(104, 14, allowAbyss, allowSaws, i % 2 === 0, true)
+      addAbyss(98, 14, allowAbyss, allowSaws, i % 2 === 0, true)
       addSmallIsland(76, -0.78, i % 2 === 1)
     }
-    addAbyss(106, 14, allowAbyss, allowSaws, true, true)
-    addSegment(85, 0.25, false, false, false)
+    addAbyss(98, 14, allowAbyss, allowSaws, true, true)
+    addSegment(85, 0.22, false, false, false)
     addSegment(70, 0.0, false, false, false)
   }
 
@@ -278,7 +278,7 @@ export function createGameEngine(initialSeed = 20261110) {
       }
     }
 
-    addSegment(85, 0.32, false, false, false)
+    addSegment(85, 0.30, false, false, false)
     addSegment(75, 0.0, false, false, false)
   }
 
@@ -301,8 +301,8 @@ export function createGameEngine(initialSeed = 20261110) {
     } else if (pattern === 3) {
       addMountainSteepDescent(allowSaws, true)
       addSegment(85, -0.82, true, false, false)
-      addAbyss(108, 12, allowAbyss, allowSaws, true, true)
-      addSegment(85, 0.28, false, false, false)
+      addAbyss(98, 12, allowAbyss, allowSaws, true, true)
+      addSegment(85, 0.25, false, false, false)
       addSegment(70, 0.0, false, false, false)
     } else if (pattern === 4) {
       addSegment(115, -1.12, false, false, false)
@@ -401,7 +401,7 @@ export function createGameEngine(initialSeed = 20261110) {
           y,
           m,
           angle: Math.atan2(m, 1),
-          kicker: s.kicker && u > 0.78,
+          kicker: s.kicker && u > 0.86,
           abyss: s.abyss,
           steepDrop: s.steepDrop,
           island: s.island,
@@ -662,19 +662,26 @@ export function createGameEngine(initialSeed = 20261110) {
         b.vy = -12
         b.y = cur.y - 6
         b.angVel = -2.4
-      } else if ((cur.kicker && b.speed > 85) || (next.abyss && !cur.abyss)) {
+      } else if ((cur.kicker && b.speed > 115) || (next.abyss && !cur.abyss)) {
         b.onGround = false
         b.onSteepDrop = false
         b.airTime = 0
         b.airRotation = 0
         b.airFlips = 0
-        const launchAngle = clamp(cur.angle, -0.78, -0.52)
-        const effSpeed = Math.max(b.speed, cur.island ? 172 : 156)
         b.x = nextX
-        b.vx = clamp(effSpeed * Math.cos(launchAngle) * 1.16, 148, 225)
-        b.vy = Math.min(-148, effSpeed * Math.sin(launchAngle) * 1.18 - 28)
-        b.y = cur.y - 7
-        b.angVel = isPressing ? -2.5 : 0
+        if (b.speed < 115 && !isPressing) {
+          b.vx = b.speed * Math.cos(cur.angle)
+          b.vy = b.speed * Math.sin(cur.angle)
+          b.y = cur.y - 6
+          b.angVel = 0
+        } else {
+          const launchAngle = clamp(cur.angle, -0.78, -0.52)
+          const effSpeed = Math.max(b.speed, cur.island ? 176 : 168)
+          b.vx = clamp(effSpeed * Math.cos(launchAngle) * 1.18, 162, 225)
+          b.vy = Math.min(-162, effSpeed * Math.sin(launchAngle) * 1.22 - 28)
+          b.y = cur.y - 7
+          b.angVel = isPressing ? -2.5 : 0
+        }
       } else {
         b.x = nextX
         b.y = next.y - 6
@@ -738,7 +745,7 @@ export function createGameEngine(initialSeed = 20261110) {
         b.angVel = 0
 
         const impactSpeed = Math.hypot(b.vx, b.vy)
-        const minLandSpeed = ground.island ? 156 : 115
+        const minLandSpeed = ground.island ? 162 : 120
         b.speed = clamp(Math.max(b.speed, impactSpeed * 0.88), minLandSpeed, maxSpeed)
 
         if (b.airFlips > 0) {
