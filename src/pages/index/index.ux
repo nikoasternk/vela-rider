@@ -11,16 +11,16 @@
         <text class="hud-info">{{ infoText }}</text>
       </div>
 
-      <stack class="viewport" style="width: {{ viewW }}px; height: {{ viewH }}px;">
+      <stack class="viewport" style="height: {{ viewportH }}px;">
         <chart
           class="track-chart"
-          style="width: {{ viewW }}px; height: {{ viewH }}px;"
+          style="height: {{ viewportH }}px;"
           type="line"
           options="{{ lineOpts }}"
           datasets="{{ lineData }}"
         ></chart>
 
-        <div class="sprite-layer" style="width: {{ viewW }}px; height: {{ viewH }}px;">
+        <div class="sprite-layer" style="height: {{ viewportH }}px;">
           <div
             class="saw-node"
             style="left: {{ hazX }}px; top: {{ hazY }}px;"
@@ -68,26 +68,29 @@
 
     <div class="overlay-screen" if="{{ showSettings }}">
       <text class="cfg-title">НАСТРОЙКИ</text>
-      <div class="cfg-list">
-        <text class="cfg-item" onclick="onCycleZoom">МАСШТАБ: {{ zoomLabel }}</text>
-        <text class="cfg-item" onclick="onCycleDifficulty">СЛОЖНОСТЬ: {{ diffLabel }}</text>
-        <text class="cfg-item" onclick="onCycleObstacles">РЕЖИМ: {{ obsLabel }}</text>
-        <text class="cfg-item" onclick="onToggleSpin">ВРАЩЕНИЕ: {{ spinLabel }}</text>
-        <text class="cfg-item" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
-        <text class="cfg-item" onclick="onToggleFps">ПОКАЗ FPS: {{ fpsLabel }}</text>
-        <text class="cfg-item" onclick="onCycleScreenMode">ЭКРАН: {{ screenLabel }}</text>
-        <text class="cfg-item-warn" onclick="onResetBest">{{ resetLabel }}</text>
+      <div class="cfg-row">
+        <text class="cfg-cell" onclick="onCycleZoom">ЗУМ: {{ zoomLabel }}</text>
+        <text class="cfg-cell" onclick="onCycleDifficulty">СЛОЖН: {{ diffLabel }}</text>
       </div>
-      <text class="retry-btn" onclick="onCloseSettings">ИГРАТЬ</text>
+      <div class="cfg-row">
+        <text class="cfg-cell" onclick="onCycleObstacles">РЕЖИМ: {{ obsLabel }}</text>
+        <text class="cfg-cell" onclick="onToggleSpin">ВРАЩ: {{ spinLabel }}</text>
+      </div>
+      <div class="cfg-row">
+        <text class="cfg-cell" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
+        <text class="cfg-cell" onclick="onToggleFps">FPS: {{ fpsLabel }}</text>
+      </div>
+      <text class="cfg-item-warn" onclick="onResetBest">{{ resetLabel }}</text>
+      <text class="cfg-play-btn" onclick="onCloseSettings">ИГРАТЬ</text>
     </div>
   </stack>
 </template>
 
 <script>
-import device from '@system.device'
 import storage from '@system.storage'
 import vibrator from '@system.vibrator'
 import brightness from '@system.brightness'
+import device from '@system.device'
 import { createGameEngine } from '../../common/engine.js'
 
 let engineInstance = null
@@ -105,6 +108,7 @@ const sharedDataset = {
 
 export default {
   private: {
+    viewportH: 300,
     score: 0,
     bestScore: 0,
     gems: 0,
@@ -125,11 +129,6 @@ export default {
     diffLabel: 'НОРМ',
     obstacleMode: 0,
     obsLabel: 'ВСЕ',
-    screenMode: 0,
-    screenLabel: 'АВТО',
-    detectedProfile: 1,
-    viewW: 200,
-    viewH: 300,
     showFps: true,
     fpsLabel: 'ВКЛ',
     resetLabel: 'СБРОС РЕКОРДА',
@@ -172,9 +171,53 @@ export default {
 
   onInit() {
     engineInstance = createGameEngine(Date.now() & 0xffffffff)
-    this.detectDeviceScreen()
+    this.detectScreenGeometry()
     this.syncView(engineInstance.getRenderSnapshot(), true)
     this.loadSavedData()
+  },
+
+  detectScreenGeometry() {
+    try {
+      if (device && typeof device.getInfo === 'function') {
+        device.getInfo({
+          success: (info) => {
+            const w = Number(info.windowWidth || info.screenWidth || 212)
+            const h = Number(info.windowHeight || info.screenHeight || 520)
+            if (w > 0 && h > 0) {
+              const logicalH = Math.round((212 * h) / w)
+              const targetVpH = Math.max(140, Math.min(300, logicalH - 116))
+              if (targetVpH !== this.viewportH) {
+                this.viewportH = targetVpH
+                this.lineOpts = {
+                  xAxis: {
+                    min: 0,
+                    max: 10,
+                    axisTick: 10,
+                    display: false
+                  },
+                  yAxis: {
+                    min: 0,
+                    max: targetVpH,
+                    axisTick: 6,
+                    display: false
+                  },
+                  series: {
+                    lineStyle: {
+                      width: '3px',
+                      smooth: false
+                    }
+                  }
+                }
+                if (engineInstance) {
+                  engineInstance.setViewport(200, targetVpH)
+                  this.syncView(engineInstance.getRenderSnapshot(), true)
+                }
+              }
+            }
+          }
+        })
+      }
+    } catch (e) {}
   },
 
   onShow() {
@@ -207,32 +250,6 @@ export default {
     } catch (e) {}
   },
 
-  detectDeviceScreen() {
-    try {
-      if (device && typeof device.getInfo === 'function') {
-        device.getInfo({
-          success: (info) => {
-            if (info && info.screenWidth && info.screenHeight) {
-              const ratio = info.screenHeight / info.screenWidth
-              const shape = String(info.screenShape || '').toLowerCase()
-              if (shape === 'circle' || shape === 'round' || ratio < 1.15) {
-                this.detectedProfile = 3
-              } else if (ratio < 1.85) {
-                this.detectedProfile = 2
-              } else {
-                this.detectedProfile = 1
-              }
-              this.applyEngineSettings()
-              if (engineInstance) {
-                this.syncView(engineInstance.getRenderSnapshot(), true)
-              }
-            }
-          }
-        })
-      }
-    } catch (e) {}
-  },
-
   applyEngineSettings() {
     if (!engineInstance) return
     engineInstance.state.turboFlip = this.turboSpin
@@ -241,27 +258,12 @@ export default {
       this.zoomMode === 0 ? 1.0 : this.zoomMode === 1 ? 0.72 : 1.28
     engineInstance.state.difficultyMode = this.difficultyMode
     engineInstance.state.obstacleMode = this.obstacleMode
-
-    const activeProfile =
-      this.screenMode === 0 ? this.detectedProfile : this.screenMode
-    let targetW = 200
-    let targetH = 300
-    if (activeProfile === 2) {
-      targetW = 196
-      targetH = 188
-    } else if (activeProfile === 3) {
-      targetW = 176
-      targetH = 136
-    }
-    this.viewW = targetW
-    this.viewH = targetH
-    engineInstance.setViewport(targetW, targetH)
   },
 
   loadSavedData() {
     try {
       storage.get({
-        key: 'com_band_rider_v11',
+        key: 'com_band_rider_v10',
         success: (data) => {
           if (data) {
             try {
@@ -303,18 +305,7 @@ export default {
                     ? 'ВСЕ'
                     : this.obstacleMode === 1
                     ? 'БЕЗ ПИЛ'
-                    : 'ФРИ'
-              }
-              if (typeof parsed.scr === 'number') {
-                this.screenMode = parsed.scr % 4
-                this.screenLabel =
-                  this.screenMode === 0
-                    ? 'АВТО'
-                    : this.screenMode === 1
-                    ? 'КАПС'
-                    : this.screenMode === 2
-                    ? 'ЧАСЫ'
-                    : 'КРУГ'
+                    : 'ФРИРАЙД'
               }
               if (typeof parsed.showFps === 'boolean') {
                 this.showFps = parsed.showFps
@@ -332,7 +323,7 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'com_band_rider_v11',
+        key: 'com_band_rider_v10',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
@@ -341,7 +332,6 @@ export default {
           zoom: this.zoomMode,
           diff: this.difficultyMode,
           obs: this.obstacleMode,
-          scr: this.screenMode,
           showFps: this.showFps
         })
       })
@@ -433,6 +423,7 @@ export default {
     if (this.gemY !== snap.gemY) this.gemY = snap.gemY
     if (this.gem2X !== snap.gem2X) this.gem2X = snap.gem2X
     if (this.gem2Y !== snap.gem2Y) this.gem2Y = snap.gem2Y
+
     if (this.hazX !== snap.hazX) this.hazX = snap.hazX
     if (this.hazY !== snap.hazY) this.hazY = snap.hazY
     if (this.haz2X !== snap.haz2X) this.haz2X = snap.haz2X
@@ -444,6 +435,8 @@ export default {
 
     const nextInfo = snap.bannerText
       ? snap.bannerText
+      : b.onSteepDrop
+      ? 'ОТПУСТИ НА СПУСКЕ!'
       : 'РЕКОРД ' + snap.bestScore + '  |  КРИСТ ' + snap.gems
     if (this.infoText !== nextInfo) {
       this.infoText = nextInfo
@@ -528,24 +521,8 @@ export default {
         ? 'ВСЕ'
         : this.obstacleMode === 1
         ? 'БЕЗ ПИЛ'
-        : 'ФРИ'
+        : 'ФРИРАЙД'
     this.applyEngineSettings()
-    this.pulseHaptic('short')
-    this.saveProgress()
-  },
-
-  onCycleScreenMode() {
-    this.screenMode = (this.screenMode + 1) % 4
-    this.screenLabel =
-      this.screenMode === 0
-        ? 'АВТО'
-        : this.screenMode === 1
-        ? 'КАПС'
-        : this.screenMode === 2
-        ? 'ЧАСЫ'
-        : 'КРУГ'
-    this.applyEngineSettings()
-    this.syncView(engineInstance.getRenderSnapshot(), true)
     this.pulseHaptic('short')
     this.saveProgress()
   },
@@ -605,15 +582,15 @@ export default {
 
 .hud-top {
   width: 184px;
-  height: 68px;
-  margin-top: 8px;
+  height: 54px;
+  margin-top: 6px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
 .hud-score {
-  font-size: 34px;
+  font-size: 30px;
   color: #FFFFFF;
   text-align: center;
 }
@@ -642,30 +619,30 @@ export default {
 }
 
 .bottom-bar {
-  width: 184px;
-  height: 72px;
+  width: 100%;
+  height: 54px;
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 .menu-btn {
-  width: 136px;
-  height: 36px;
-  border-radius: 18px;
+  width: 124px;
+  height: 30px;
+  border-radius: 15px;
   border-width: 2px;
   border-color: #FFFFFF;
   background-color: #121212;
-  font-size: 14px;
+  font-size: 13px;
   color: #FFFFFF;
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .fps-counter {
-  width: 100px;
-  height: 18px;
+  width: 96px;
+  height: 16px;
   font-size: 12px;
   color: #777777;
   text-align: center;
@@ -722,13 +699,13 @@ export default {
 }
 
 .crash-title {
-  font-size: 24px;
+  font-size: 22px;
   color: #FFFFFF;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .crash-stat {
-  font-size: 20px;
+  font-size: 18px;
   color: #EAEAEA;
   margin-bottom: 4px;
 }
@@ -736,72 +713,85 @@ export default {
 .crash-best {
   font-size: 13px;
   color: #999999;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .retry-btn {
-  width: 160px;
-  height: 38px;
-  border-radius: 19px;
+  width: 148px;
+  height: 36px;
+  border-radius: 18px;
   border-width: 2px;
   border-color: #FFFFFF;
   background-color: #FFFFFF;
-  font-size: 15px;
+  font-size: 14px;
   color: #000000;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.sub-btn {
+  width: 136px;
+  height: 32px;
+  border-radius: 16px;
+  border-width: 2px;
+  border-color: #666666;
+  background-color: #121212;
+  font-size: 13px;
+  color: #FFFFFF;
   text-align: center;
   margin-top: 8px;
 }
 
-.sub-btn {
-  width: 150px;
-  height: 36px;
-  border-radius: 18px;
-  border-width: 2px;
-  border-color: #666666;
-  background-color: #121212;
-  font-size: 14px;
-  color: #FFFFFF;
-  text-align: center;
-  margin-top: 10px;
-}
-
 .cfg-title {
-  font-size: 18px;
+  font-size: 16px;
   color: #FFFFFF;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
-.cfg-list {
-  width: 188px;
-  height: 316px;
-  flex-direction: column;
+.cfg-row {
+  width: 176px;
+  height: 30px;
+  flex-direction: row;
+  justify-content: space-between;
   align-items: center;
-  justify-content: flex-start;
+  margin-top: 3px;
 }
 
-.cfg-item {
-  width: 180px;
-  height: 34px;
-  border-radius: 17px;
+.cfg-cell {
+  width: 85px;
+  height: 28px;
+  border-radius: 14px;
   border-width: 2px;
   border-color: #555555;
-  background-color: #121212;
-  font-size: 13px;
+  background-color: #101010;
+  font-size: 11px;
   color: #FFFFFF;
   text-align: center;
-  margin-top: 4px;
 }
 
 .cfg-item-warn {
-  width: 180px;
-  height: 34px;
-  border-radius: 17px;
+  width: 148px;
+  height: 26px;
+  border-radius: 13px;
   border-width: 2px;
   border-color: #444444;
-  background-color: #0A0A0A;
-  font-size: 13px;
+  background-color: #080808;
+  font-size: 11px;
   color: #AAAAAA;
   text-align: center;
-  margin-top: 4px;
+  margin-top: 5px;
+}
+
+.cfg-play-btn {
+  width: 124px;
+  height: 32px;
+  border-radius: 16px;
+  border-width: 2px;
+  border-color: #FFFFFF;
+  background-color: #FFFFFF;
+  font-size: 14px;
+  color: #000000;
+  text-align: center;
+  margin-top: 5px;
 }
 </style>
