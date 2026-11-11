@@ -40,7 +40,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: Rider Vela v1.0.${{ github.run_number }}
+          name: Rider Vela OS v1.0.${{ github.run_number }}
           files: dist/*.rpk
           generate_release_notes: true
         env:
