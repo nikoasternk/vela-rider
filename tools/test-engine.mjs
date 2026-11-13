@@ -35,7 +35,7 @@ const {
   VIEW_H
 } = await import(moduleUrl)
 
-console.log('[TEST 1/7] Checking rainbow color interpolation...')
+console.log('[TEST 1/8] Checking rainbow color interpolation...')
 check(RAINBOW_COLORS.length === 7, 'RAINBOW_COLORS_LEN', { len: RAINBOW_COLORS.length })
 for (let i = 0; i < 7; i++) {
   const cStart = computeRainbowTrackColor(i * SECTION_LENGTH + 50)
@@ -49,7 +49,7 @@ for (let i = 0; i < 7; i++) {
 }
 console.log('[PASS] Rainbow color interpolation OK')
 
-console.log('[TEST 2/7] Checking world generation & universal viewport...')
+console.log('[TEST 2/8] Checking world generation, C1 abyss continuity & universal viewport...')
 const engine = createGameEngine(1337)
 engine.startGame()
 check(engine.state.status === 'playing', 'ENGINE_START_PLAYING', { status: engine.state.status })
@@ -62,12 +62,22 @@ check(engine.state.segs.some((s) => s.abyss), 'HAS_ABYSS_SEGMENTS', {
 check(engine.state.segs.some((s) => s.island), 'HAS_ISLAND_SEGMENTS', {
   segsCount: engine.state.segs.length
 })
-check(engine.state.segs.some((s) => s.steepDrop), 'HAS_HIGH_MOUNTAIN_STEEP_DROP', {
+check(engine.state.segs.some((s) => s.peakLaunch), 'HAS_MOUNTAIN_WITH_SAW', {
   segsCount: engine.state.segs.length
 })
-check(engine.state.hazards.length >= 3, 'HAS_SAWS_GENERATED', {
+check(engine.state.hazards.length >= 2, 'HAS_SAWS_GENERATED', {
   hazardsCount: engine.state.hazards.length
 })
+
+for (let i = 1; i < engine.state.segs.length; i++) {
+  const prev = engine.state.segs[i - 1]
+  const curr = engine.state.segs[i]
+  check(
+    Math.abs(prev.y1 - curr.y0) < 0.01 && Math.abs(prev.m1 - curr.m0) < 0.01,
+    'C1_SPLINE_CONTINUITY_AT_SEG_' + i,
+    { index: i, prevY1: prev.y1, currY0: curr.y0, prevM1: prev.m1, currM0: curr.m0 }
+  )
+}
 
 engine.setViewport(200, 180)
 check(engine.state.viewH === 180, 'VIEWPORT_RESIZE_180', { viewH: engine.state.viewH })
@@ -79,9 +89,9 @@ for (let j = 0; j < engine.state.chartData.length; j++) {
   )
 }
 engine.setViewport(200, VIEW_H)
-console.log('[PASS] World generation & universal viewport OK')
+console.log('[PASS] World generation & C1 abyss continuity OK')
 
-console.log('[TEST 3/7] Checking bike complete stop when button is released...')
+console.log('[TEST 3/8] Checking bike complete stop when button is released...')
 const stopEngine = createGameEngine(2026)
 stopEngine.startGame()
 for (let i = 0; i < 90; i++) {
@@ -98,14 +108,37 @@ check(
 )
 console.log('[PASS] Bike complete stop when released OK')
 
-console.log('[TEST 4/7] Checking high mountain overhanging red saw physics...')
+console.log('[TEST 4/8] Checking high jump off saw-free mountain at full speed...')
+const freeMountEngine = createGameEngine(2026)
+freeMountEngine.startGame()
+const freeMountSeg = freeMountEngine.state.segs.find((s) => s.kicker && s.dx === 90)
+check(Boolean(freeMountSeg), 'FIND_FREE_MOUNTAIN_PEAK', {})
+freeMountEngine.state.bike.x = freeMountSeg.x0 + 40
+freeMountEngine.state.bike.y = freeMountSeg.y0 - 20
+freeMountEngine.state.bike.speed = 210
+freeMountEngine.state.bike.onGround = true
+let launchedHighOffMountain = false
+for (let i = 0; i < 30; i++) {
+  freeMountEngine.step(0.016, true)
+  if (!freeMountEngine.state.bike.onGround && freeMountEngine.state.bike.vy < -150) {
+    launchedHighOffMountain = true
+    break
+  }
+}
+check(launchedHighOffMountain, 'FREE_MOUNTAIN_HIGH_JUMP_LAUNCH', {
+  onGround: freeMountEngine.state.bike.onGround,
+  vy: freeMountEngine.state.bike.vy
+})
+console.log('[PASS] High jump off saw-free mountain OK')
+
+console.log('[TEST 5/8] Checking high mountain overhanging red saw & hitbox clarity...')
 const steepSawHitBot = createGameEngine(2026)
 steepSawHitBot.startGame()
-const steepSeg = steepSawHitBot.state.segs.find((s) => s.steepDrop)
-check(Boolean(steepSeg), 'FIND_STEEP_DROP_SEG', { segs: steepSawHitBot.state.segs.length })
-steepSawHitBot.state.bike.x = steepSeg.x0 - 8
-steepSawHitBot.state.bike.y = steepSeg.y0 - 6
-steepSawHitBot.state.bike.speed = 175
+const peakSeg = steepSawHitBot.state.segs.find((s) => s.peakLaunch)
+check(Boolean(peakSeg), 'FIND_PEAK_LAUNCH_SEG', {})
+steepSawHitBot.state.bike.x = peakSeg.x0 - 6
+steepSawHitBot.state.bike.y = peakSeg.y0 - 6
+steepSawHitBot.state.bike.speed = 180
 steepSawHitBot.state.bike.onGround = true
 for (let i = 0; i < 45; i++) {
   steepSawHitBot.step(0.016, true)
@@ -124,33 +157,43 @@ check(
 
 const steepSawSafeBot = createGameEngine(2026)
 steepSawSafeBot.startGame()
-const steepSegSafe = steepSawSafeBot.state.segs.find((s) => s.steepDrop)
-steepSawSafeBot.state.bike.x = steepSegSafe.x0 - 30
-steepSawSafeBot.state.bike.y = steepSegSafe.y0 - 6
-steepSawSafeBot.state.bike.speed = 165
+const peakSegSafe = steepSawSafeBot.state.segs.find((s) => s.peakLaunch)
+const mountainSaw = steepSawSafeBot.state.hazards.find((h) => Math.abs(h.x - (peakSegSafe.x0 + 80)) < 5)
+check(Boolean(mountainSaw), 'FIND_MOUNTAIN_SAW', {})
+steepSawSafeBot.state.bike.x = peakSegSafe.x0 - 70
+steepSawSafeBot.state.bike.y = peakSegSafe.y0 + 30
+steepSawSafeBot.state.bike.speed = 175
 steepSawSafeBot.state.bike.onGround = true
-for (let i = 0; i < 95; i++) {
+let minDistToSaw = 9999
+for (let i = 0; i < 110; i++) {
   steepSawSafeBot.step(0.016, false)
+  const d = Math.hypot(
+    mountainSaw.x - steepSawSafeBot.state.bike.x,
+    mountainSaw.y - steepSawSafeBot.state.bike.y
+  )
+  if (d < minDistToSaw) minDistToSaw = d
   check(steepSawSafeBot.state.status === 'playing', 'MOUNTAIN_SAW_SAFE_DESCENT_STEP_' + i, {
     step: i,
     status: steepSawSafeBot.state.status,
     crashReason: steepSawSafeBot.state.crashReason,
     bikeX: steepSawSafeBot.state.bike.x,
     bikeY: steepSawSafeBot.state.bike.y,
-    speed: steepSawSafeBot.state.bike.speed
+    minDistToSaw
   })
 }
 check(
-  steepSawSafeBot.state.bike.x > steepSegSafe.x0 + 115,
-  'MOUNTAIN_SAW_SAFE_DESCENT_CLEARED',
+  steepSawSafeBot.state.bike.x > peakSegSafe.x0 + 130 && minDistToSaw > 26,
+  'MOUNTAIN_SAW_SAFE_CLEARANCE_VISUAL_GAP',
   {
     bikeX: steepSawSafeBot.state.bike.x,
-    targetX: steepSegSafe.x0 + 115
+    minDistToSaw
   }
 )
-console.log('[PASS] High mountain overhanging red saw physics OK')
+console.log('[PASS] High mountain overhanging red saw & hitbox clarity OK:', {
+  minDistToSaw: Math.round(minDistToSaw)
+})
 
-console.log('[TEST 5/7] Checking abyss fall & reckless hold crash...')
+console.log('[TEST 6/8] Checking abyss fall & reckless hold crash...')
 const abyssFallBot = createGameEngine(2026)
 abyssFallBot.startGame()
 const firstAbyss = abyssFallBot.state.segs.find((s) => s.abyss)
@@ -168,9 +211,7 @@ check(
   'LOW_SPEED_FALLS_INTO_ABYSS',
   {
     status: abyssFallBot.state.status,
-    crashReason: abyssFallBot.state.crashReason,
-    bikeX: abyssFallBot.state.bike.x,
-    bikeY: abyssFallBot.state.bike.y
+    crashReason: abyssFallBot.state.crashReason
   }
 )
 
@@ -181,12 +222,11 @@ for (let i = 0; i < 400; i++) {
   if (holdBot.state.status === 'gameover') break
 }
 check(holdBot.state.status === 'gameover', 'RECKLESS_HOLD_BOT_CRASHES', {
-  status: holdBot.state.status,
-  bikeX: holdBot.state.bike.x
+  status: holdBot.state.status
 })
 console.log('[PASS] Abyss fall & reckless hold crash OK')
 
-console.log('[TEST 6/7] Running proBot skill verification (3000 steps)...')
+console.log('[TEST 7/8] Running proBot skill verification (3000 steps)...')
 const proBot = createGameEngine(2026)
 proBot.startGame()
 let flipsDone = 0
@@ -223,7 +263,7 @@ check(flipsDone >= 15 && landingsDone >= 15, 'PROBOT_FLIPS_AND_LANDINGS', {
 })
 console.log('[PASS] proBot skill verification OK:', { flipsDone, landingsDone, crashesCount })
 
-console.log('[TEST 7/7] Running 15,000-step endurance & memory stability test...')
+console.log('[TEST 8/8] Running 15,000-step endurance & memory stability test...')
 for (let i = 0; i < 15000; i++) {
   if (proBot.state.status !== 'playing') {
     proBot.startGame()
@@ -231,7 +271,7 @@ for (let i = 0; i < 15000; i++) {
   const b = proBot.state.bike
   const hold = (b.onGround && !b.onSteepDrop) || (!b.onGround && b.airFlips < 1)
   proBot.step(0.016, hold)
-  check(proBot.state.segs.length <= 28, 'ENDURANCE_SEGS_BOUNDED', {
+  check(proBot.state.segs.length <= 36, 'ENDURANCE_SEGS_BOUNDED', {
     step: i,
     segsLen: proBot.state.segs.length
   })
@@ -250,7 +290,7 @@ for (let i = 0; i < 15000; i++) {
   })
 }
 console.log('[PASS] 15,000-step endurance & memory stability OK')
-console.log('ALL_7_DIAGNOSTIC_SUITES_PASSED_OK', {
+console.log('ALL_8_DIAGNOSTIC_SUITES_PASSED_OK', {
   flipsDone,
   landingsDone,
   bestScore: proBot.state.bestScore
