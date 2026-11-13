@@ -98,6 +98,7 @@ let loopTimer = null
 let lastTickMs = 0
 let fpsFrameCount = 0
 let fpsWindowStartMs = 0
+let watchdogTickCount = 0
 
 const sharedDataset = {
   strokeColor: '#FF1844',
@@ -105,6 +106,8 @@ const sharedDataset = {
   gradient: false,
   data: [140, 140, 140, 140, 140, 140, 140, 140, 140, 140, 140]
 }
+
+const sharedLineData = [sharedDataset]
 
 export default {
   private: {
@@ -166,7 +169,7 @@ export default {
         }
       }
     },
-    lineData: [sharedDataset]
+    lineData: sharedLineData
   },
 
   onInit() {
@@ -263,7 +266,7 @@ export default {
   loadSavedData() {
     try {
       storage.get({
-        key: 'com_band_rider_v10',
+        key: 'com_band_rider_v11',
         success: (data) => {
           if (data) {
             try {
@@ -323,7 +326,7 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'com_band_rider_v10',
+        key: 'com_band_rider_v11',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
@@ -353,6 +356,7 @@ export default {
     lastTickMs = nowInit
     fpsWindowStartMs = nowInit
     fpsFrameCount = 0
+    watchdogTickCount = 0
 
     const tick = () => {
       loopTimer = null
@@ -362,6 +366,7 @@ export default {
       const now = Date.now()
       const dt = (now - lastTickMs) * 0.001
       lastTickMs = now
+      watchdogTickCount = (watchdogTickCount + 1) & 63
 
       if (this.showFps) {
         fpsFrameCount += 1
@@ -392,9 +397,10 @@ export default {
         return
       }
 
-      loopTimer = setTimeout(tick, 10)
+      const nextDelay = watchdogTickCount === 0 ? 24 : 14
+      loopTimer = setTimeout(tick, nextDelay)
     }
-    loopTimer = setTimeout(tick, 10)
+    loopTimer = setTimeout(tick, 14)
   },
 
   stopLoop() {
@@ -408,7 +414,7 @@ export default {
     if (forceChart || snap.status === 'playing') {
       sharedDataset.strokeColor = snap.trackColor
       sharedDataset.data = snap.chartData
-      this.lineData = [sharedDataset]
+      this.lineData = sharedLineData
     }
 
     const b = snap.bike
@@ -436,7 +442,7 @@ export default {
     const nextInfo = snap.bannerText
       ? snap.bannerText
       : b.onSteepDrop
-      ? 'ОТПУСТИ НА СПУСКЕ!'
+      ? 'СБРОСЬ ГАЗ НА ГОРЕ!'
       : 'РЕКОРД ' + snap.bestScore + '  |  КРИСТ ' + snap.gems
     if (this.infoText !== nextInfo) {
       this.infoText = nextInfo
