@@ -744,14 +744,14 @@ export function createGameEngine(initialSeed = 20261113) {
       if (isPressing) {
         b.angVel = Math.max(-maxSpin, b.angVel - spinAcc * dt)
       } else {
-        b.angVel *= Math.max(0, 1 - 14.0 * dt)
+        b.angVel *= Math.max(0, 1 - 17.5 * dt)
       }
 
       const dTheta = b.angVel * dt
       b.angle = normalizeAngle(b.angle + dTheta)
       if (dTheta < 0) {
         b.airRotation += -dTheta
-        const totalFlips = Math.floor((b.airRotation + 0.90) / 6.283185307179586)
+        const totalFlips = Math.floor((b.airRotation + 1.06) / 6.283185307179586)
         if (totalFlips > b.airFlips) {
           b.airFlips = totalFlips
           state.bannerText = 'САЛЬТО x' + b.airFlips
@@ -786,7 +786,7 @@ export function createGameEngine(initialSeed = 20261113) {
           b.angVel = 0
 
           const vTan = b.vx * Math.cos(ground.angle) + b.vy * Math.sin(ground.angle)
-          b.speed = clamp(Math.max(b.speed * 0.72, vTan * 0.98), 45, maxSpeed)
+          b.speed = clamp(Math.max(b.speed * 0.78, vTan * 0.98), 45, maxSpeed)
 
           if (b.airFlips > 0) {
             if (diff < 0.34) {
