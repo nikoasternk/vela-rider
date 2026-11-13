@@ -178,14 +178,14 @@ check(
 const safeBot = createGameEngine(2026)
 safeBot.startGame()
 const crestSafe = safeBot.state.segs.find((s) => s.overSawZone && s.m1 > 1.0)
-const overSaw = safeBot.state.hazards.find((h) => Math.abs(h.x - (crestSafe.x0 + 62)) < 5)
+const overSaw = safeBot.state.hazards.find((h) => Math.abs(h.x - (crestSafe.x0 + 66)) < 5)
 check(Boolean(overSaw), 'FIND_OVER_PEAK_SAW', {})
 safeBot.state.bike.x = crestSafe.x0 - 30
 safeBot.state.bike.y = crestSafe.y0 + 18
 safeBot.state.bike.speed = 135
 safeBot.state.bike.onGround = true
 let minClearance = 9999
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 125; i++) {
   safeBot.step(0.016, false)
   const d = Math.hypot(overSaw.x - safeBot.state.bike.x, overSaw.y - safeBot.state.bike.y)
   if (d < minClearance) minClearance = d
