@@ -45,7 +45,8 @@ check(openBraces === 0 && source.trim().endsWith('}'), 'ENGINE_JS_SYNTAX_COMPLET
   tail: source.slice(-120)
 })
 
-const cjsSource = source.replace(/export const /g, 'const ').replace(/export function /g, 'function ') +
+const cjsSource =
+  source.replace(/export const /g, 'const ').replace(/export function /g, 'function ') +
   '\nmodule.exports = { VIEW_W, VIEW_H, CHART_POINTS, POINT_STEP, BIKE_SCREEN_X, SECTION_LENGTH, RAINBOW_COLORS, computeRainbowTrackColor, createGameEngine };'
 const sandbox = { module: { exports: {} }, Math, Array, Boolean }
 vm.runInNewContext(cjsSource, sandbox, { filename: 'src/common/engine.js' })
@@ -196,7 +197,10 @@ const kickers90 = jumpMountEngine.state.segs.filter((s) => s.kicker && s.dx === 
 check(kickers90.length >= 2, 'FIND_MUST_JUMP_MOUNTAIN', { count: kickers90.length })
 const mustJumpSeg = kickers90[1]
 const roadSaw = jumpMountEngine.state.hazards.find((h) => Math.abs(h.x - (mustJumpSeg.x1 + 56)) < 5)
-check(Boolean(roadSaw), 'FIND_ON_ROAD_MOUNTAIN_SAW', {})
+check(Boolean(roadSaw), 'FIND_ON_ROAD_MOUNTAIN_SAW', {
+  expectedX: mustJumpSeg.x1 + 56,
+  hazards: jumpMountEngine.state.hazards
+})
 
 jumpMountEngine.state.bike.x = mustJumpSeg.x0 + 30
 jumpMountEngine.state.bike.y = mustJumpSeg.y0 - 15
@@ -224,9 +228,9 @@ check(
 
 const slowMountEngine = createGameEngine(2026)
 slowMountEngine.startGame()
-slowMountEngine.state.bike.x = mustJumpSeg.x1 + 2
-slowMountEngine.state.bike.y = mustJumpSeg.y1 - 6
-slowMountEngine.state.bike.speed = 105
+slowMountEngine.state.bike.x = mustJumpSeg.x1 + 28
+slowMountEngine.state.bike.y = mustJumpSeg.y1 - 10
+slowMountEngine.state.bike.speed = 110
 slowMountEngine.state.bike.onGround = true
 for (let i = 0; i < 45; i++) {
   slowMountEngine.step(0.016, false)
@@ -235,7 +239,12 @@ for (let i = 0; i < 45; i++) {
 check(
   slowMountEngine.state.status === 'gameover' && slowMountEngine.state.crashReason === 'ПИЛА!',
   'MUST_JUMP_MOUNTAIN_HITS_SAW_IF_NOT_JUMPING',
-  { status: slowMountEngine.state.status, crashReason: slowMountEngine.state.crashReason }
+  {
+    status: slowMountEngine.state.status,
+    crashReason: slowMountEngine.state.crashReason,
+    bikeX: slowMountEngine.state.bike.x,
+    sawX: roadSaw.x
+  }
 )
 console.log('[PASS] Mountain with on-road saw (must jump over) OK:', {
   minDistJumpOver: Math.round(minDistJumpOver)
