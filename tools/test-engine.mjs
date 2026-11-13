@@ -160,12 +160,12 @@ steepSawSafeBot.startGame()
 const peakSegSafe = steepSawSafeBot.state.segs.find((s) => s.peakLaunch)
 const mountainSaw = steepSawSafeBot.state.hazards.find((h) => Math.abs(h.x - (peakSegSafe.x0 + 80)) < 5)
 check(Boolean(mountainSaw), 'FIND_MOUNTAIN_SAW', {})
-steepSawSafeBot.state.bike.x = peakSegSafe.x0 - 70
-steepSawSafeBot.state.bike.y = peakSegSafe.y0 + 30
+steepSawSafeBot.state.bike.x = peakSegSafe.x0 - 50
+steepSawSafeBot.state.bike.y = peakSegSafe.y0 + 20
 steepSawSafeBot.state.bike.speed = 175
 steepSawSafeBot.state.bike.onGround = true
 let minDistToSaw = 9999
-for (let i = 0; i < 110; i++) {
+for (let i = 0; i < 125; i++) {
   steepSawSafeBot.step(0.016, false)
   const d = Math.hypot(
     mountainSaw.x - steepSawSafeBot.state.bike.x,
@@ -186,6 +186,7 @@ check(
   'MOUNTAIN_SAW_SAFE_CLEARANCE_VISUAL_GAP',
   {
     bikeX: steepSawSafeBot.state.bike.x,
+    targetX: peakSegSafe.x0 + 130,
     minDistToSaw
   }
 )
