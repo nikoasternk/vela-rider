@@ -1,52 +1,61 @@
 <template>
   <stack class="screen">
-    <div
-      class="game-layout"
-      if="{{ !showSettings }}"
-      ontouchstart="onScreenHoldStart"
-      ontouchend="onScreenHoldEnd"
-      ontouchcancel="onScreenHoldEnd"
-    >
-      <div class="hud-top">
-        <text class="hud-score">{{ score }}</text>
-        <text class="hud-info">{{ infoText }}</text>
-      </div>
-
-      <stack class="viewport">
-        <chart
-          class="track-chart"
-          type="line"
-          options="{{ lineOpts }}"
-          datasets="{{ lineData }}"
-        ></chart>
-
-        <div class="sprite-layer">
-          <div
-            class="boost-node"
-            style="left: {{ boostX }}px; top: {{ boostY }}px;"
-          ></div>
-          <div
-            class="saw-node"
-            style="left: {{ hazX }}px; top: {{ hazY }}px;"
-          ></div>
-          <div
-            class="gem-node"
-            style="left: {{ gemX }}px; top: {{ gemY }}px;"
-          ></div>
-          <div
-            class="bike-wheel"
-            style="left: {{ rx }}px; top: {{ ry }}px;"
-          ></div>
-          <div
-            class="bike-wheel"
-            style="left: {{ fx }}px; top: {{ fy }}px;"
-          ></div>
-          <div
-            class="bike-core"
-            style="left: {{ cx }}px; top: {{ cy }}px;"
-          ></div>
+    <div class="game-layout" if="{{ !showSettings }}">
+      <div
+        class="touch-zone"
+        ontouchstart="onScreenHoldStart"
+        ontouchend="onScreenHoldEnd"
+        ontouchcancel="onScreenHoldEnd"
+      >
+        <div class="hud-top">
+          <text class="hud-score">{{ score }}</text>
+          <text class="hud-info">{{ infoText }}</text>
         </div>
-      </stack>
+
+        <stack class="viewport">
+          <chart
+            class="track-chart"
+            type="line"
+            options="{{ lineOpts }}"
+            datasets="{{ lineData }}"
+          ></chart>
+
+          <div class="sprite-layer">
+            <div
+              class="boost-node"
+              style="left: {{ boostX }}px; top: {{ boostY }}px;"
+            ></div>
+            <div
+              class="saw-node"
+              style="left: {{ hazX }}px; top: {{ hazY }}px;"
+            ></div>
+            <div
+              class="saw-node"
+              style="left: {{ haz1X }}px; top: {{ haz1Y }}px;"
+            ></div>
+            <div
+              class="gem-node"
+              style="left: {{ gemX }}px; top: {{ gemY }}px;"
+            ></div>
+            <div
+              class="gem-node"
+              style="left: {{ gem1X }}px; top: {{ gem1Y }}px;"
+            ></div>
+            <div
+              class="bike-wheel"
+              style="left: {{ rx }}px; top: {{ ry }}px;"
+            ></div>
+            <div
+              class="bike-wheel"
+              style="left: {{ fx }}px; top: {{ fy }}px;"
+            ></div>
+            <div
+              class="bike-core"
+              style="left: {{ cx }}px; top: {{ cy }}px; border-color: {{ bikeColor }};"
+            ></div>
+          </div>
+        </stack>
+      </div>
 
       <div class="bottom-bar">
         <text class="menu-btn" if="{{ showMenuBtn }}" onclick="onOpenSettings">МЕНЮ</text>
@@ -95,7 +104,6 @@ for (let i = 0; i < CHART_POINTS; i++) {
 
 const sharedDataset = {
   strokeColor: '#FF1844',
-  fillColor: '#000000',
   gradient: false,
   data: initialChartArray
 }
@@ -127,23 +135,28 @@ export default {
     showFps: true,
     fpsLabel: 'ВКЛ',
     resetLabel: 'СБРОС РЕКОРДА',
+    bikeColor: '#FF1844',
     rx: 34,
-    ry: 134,
+    ry: 154,
     cx: 44,
-    cy: 130,
+    cy: 150,
     fx: 54,
-    fy: 134,
+    fy: 154,
     gemX: -40,
     gemY: -40,
+    gem1X: -40,
+    gem1Y: -40,
     hazX: -50,
     hazY: -50,
+    haz1X: -50,
+    haz1Y: -50,
     boostX: -60,
     boostY: -60,
     lineOpts: {
       xAxis: {
         min: 0,
-        max: 12,
-        axisTick: 12,
+        max: 16,
+        axisTick: 16,
         display: false
       },
       yAxis: {
@@ -187,10 +200,12 @@ export default {
   onHide() {
     this.isHolding = false
     this.stopLoop()
+    this.saveProgress()
   },
 
   onDestroy() {
     this.stopLoop()
+    this.saveProgress()
     try {
       if (brightness && typeof brightness.setKeepScreenOn === 'function') {
         brightness.setKeepScreenOn({ keepScreenOn: false })
@@ -340,9 +355,10 @@ export default {
         return
       }
 
-      loopTimer = setTimeout(tick, 9)
+      const workMs = Date.now() - now
+      loopTimer = setTimeout(tick, Math.max(4, 16 - workMs))
     }
-    loopTimer = setTimeout(tick, 9)
+    loopTimer = setTimeout(tick, 16)
   },
 
   stopLoop() {
@@ -359,6 +375,8 @@ export default {
       this.lineData = sharedLineData
     }
 
+    if (this.bikeColor !== snap.trackColor) this.bikeColor = snap.trackColor
+
     const b = snap.bike
     if (this.rx !== b.rx) this.rx = b.rx
     if (this.ry !== b.ry) this.ry = b.ry
@@ -369,8 +387,12 @@ export default {
 
     if (this.gemX !== snap.gemX) this.gemX = snap.gemX
     if (this.gemY !== snap.gemY) this.gemY = snap.gemY
+    if (this.gem1X !== snap.gem1X) this.gem1X = snap.gem1X
+    if (this.gem1Y !== snap.gem1Y) this.gem1Y = snap.gem1Y
     if (this.hazX !== snap.hazX) this.hazX = snap.hazX
     if (this.hazY !== snap.hazY) this.hazY = snap.hazY
+    if (this.haz1X !== snap.haz1X) this.haz1X = snap.haz1X
+    if (this.haz1Y !== snap.haz1Y) this.haz1Y = snap.haz1Y
     if (this.boostX !== snap.boostX) this.boostX = snap.boostX
     if (this.boostY !== snap.boostY) this.boostY = snap.boostY
 
@@ -382,6 +404,8 @@ export default {
       ? snap.bannerText
       : b.onSteepDrop
       ? 'ПИЛА ВПЕРЕДИ — СБРОСЬ ГАЗ!'
+      : snap.combo > 1
+      ? 'КОМБО x' + snap.combo + '  |  КРИСТ ' + snap.gems
       : 'РЕКОРД ' + snap.bestScore + '  |  КРИСТ ' + snap.gems
     if (this.infoText !== nextInfo) {
       this.infoText = nextInfo
@@ -526,10 +550,16 @@ export default {
   background-color: #000000;
 }
 
+.touch-zone {
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+}
+
 .hud-top {
   width: 184px;
   height: 54px;
-  margin-top: 8px;
+  margin-top: 12px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -550,18 +580,19 @@ export default {
 
 .viewport {
   width: 192px;
-  height: 216px;
+  height: 288px;
   background-color: #000000;
+  margin-top: 8px;
 }
 
 .track-chart {
   width: 192px;
-  height: 216px;
+  height: 288px;
 }
 
 .sprite-layer {
   width: 192px;
-  height: 216px;
+  height: 288px;
 }
 
 .bottom-bar {
@@ -570,7 +601,7 @@ export default {
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
-  padding-bottom: 8px;
+  padding-bottom: 12px;
 }
 
 .menu-btn {
@@ -636,7 +667,7 @@ export default {
   height: 8px;
   border-radius: 4px;
   border-width: 2px;
-  border-color: #CCCCCC;
+  border-color: #FF1844;
   background-color: #FFFFFF;
 }
 
