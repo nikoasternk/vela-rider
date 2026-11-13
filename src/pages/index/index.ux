@@ -2,6 +2,7 @@
   <stack class="screen">
     <div
       class="game-layout"
+      if="{{ !showSettings }}"
       ontouchstart="onScreenHoldStart"
       ontouchend="onScreenHoldEnd"
       ontouchcancel="onScreenHoldEnd"
@@ -57,23 +58,17 @@
       <text class="sub-btn" onclick="onOpenSettings">НАСТРОЙКИ</text>
     </div>
 
-    <div class="overlay-screen" if="{{ showSettings }}">
+    <scroll class="settings-window" scroll-y="true" if="{{ showSettings }}">
       <text class="cfg-title">НАСТРОЙКИ</text>
-      <div class="cfg-row">
-        <text class="cfg-cell" onclick="onCycleZoom">ЗУМ: {{ zoomLabel }}</text>
-        <text class="cfg-cell" onclick="onCycleDifficulty">СЛОЖН: {{ diffLabel }}</text>
-      </div>
-      <div class="cfg-row">
-        <text class="cfg-cell" onclick="onCycleObstacles">РЕЖИМ: {{ obsLabel }}</text>
-        <text class="cfg-cell" onclick="onToggleSpin">ВРАЩ: {{ spinLabel }}</text>
-      </div>
-      <div class="cfg-row">
-        <text class="cfg-cell" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
-        <text class="cfg-cell" onclick="onToggleFps">FPS: {{ fpsLabel }}</text>
-      </div>
-      <text class="cfg-item-warn" onclick="onResetBest">{{ resetLabel }}</text>
-      <text class="cfg-play-btn" onclick="onCloseSettings">ИГРАТЬ</text>
-    </div>
+      <text class="cfg-btn-play" onclick="onCloseSettings">ИГРАТЬ</text>
+      <text class="cfg-btn" onclick="onCycleZoom">МАСШТАБ: {{ zoomLabel }}</text>
+      <text class="cfg-btn" onclick="onCycleDifficulty">СЛОЖНОСТЬ: {{ diffLabel }}</text>
+      <text class="cfg-btn" onclick="onCycleObstacles">РЕЖИМ: {{ obsLabel }}</text>
+      <text class="cfg-btn" onclick="onToggleSpin">ВРАЩЕНИЕ: {{ spinLabel }}</text>
+      <text class="cfg-btn" onclick="onToggleVibro">ВИБРО: {{ vibroLabel }}</text>
+      <text class="cfg-btn" onclick="onToggleFps">ПОКАЗ FPS: {{ fpsLabel }}</text>
+      <text class="cfg-btn-warn" onclick="onResetBest">{{ resetLabel }}</text>
+    </scroll>
   </stack>
 </template>
 
@@ -81,7 +76,7 @@
 import storage from '@system.storage'
 import vibrator from '@system.vibrator'
 import brightness from '@system.brightness'
-import { createGameEngine } from '../../common/engine.js'
+import { createGameEngine, CHART_POINTS } from '../../common/engine.js'
 
 let engineInstance = null
 let loopTimer = null
@@ -89,11 +84,16 @@ let lastTickMs = 0
 let fpsFrameCount = 0
 let fpsWindowStartMs = 0
 
+const initialChartArray = new Array(CHART_POINTS)
+for (let i = 0; i < CHART_POINTS; i++) {
+  initialChartArray[i] = 140
+}
+
 const sharedDataset = {
   strokeColor: '#FF1844',
   fillColor: '#000000',
   gradient: false,
-  data: [140, 140, 140, 140, 140, 140, 140, 140, 140, 140, 140]
+  data: initialChartArray
 }
 
 const sharedLineData = [sharedDataset]
@@ -136,8 +136,8 @@ export default {
     lineOpts: {
       xAxis: {
         min: 0,
-        max: 10,
-        axisTick: 10,
+        max: 40,
+        axisTick: 40,
         display: false
       },
       yAxis: {
@@ -205,7 +205,7 @@ export default {
   loadSavedData() {
     try {
       storage.get({
-        key: 'com_band_rider_v12',
+        key: 'com_band_rider_v13',
         success: (data) => {
           if (data) {
             try {
@@ -265,7 +265,7 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'com_band_rider_v12',
+        key: 'com_band_rider_v13',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
@@ -373,7 +373,7 @@ export default {
     const nextInfo = snap.bannerText
       ? snap.bannerText
       : b.onSteepDrop
-      ? 'ПИЛА НАД ГОРОЙ — СБРОСЬ ГАЗ!'
+      ? 'ПИЛА ВВЕРХУ — ТОРМОЗИ!'
       : 'РЕКОРД ' + snap.bestScore + '  |  КРИСТ ' + snap.gems
     if (this.infoText !== nextInfo) {
       this.infoText = nextInfo
@@ -413,6 +413,7 @@ export default {
     this.isHolding = false
     this.stopLoop()
     this.resetLabel = 'СБРОС РЕКОРДА'
+    this.showCrash = false
     this.showSettings = true
     this.pulseHaptic('short')
   },
@@ -654,81 +655,88 @@ export default {
 }
 
 .retry-btn {
-  width: 148px;
-  height: 36px;
-  border-radius: 18px;
+  width: 164px;
+  height: 44px;
+  border-radius: 22px;
   border-width: 2px;
   border-color: #FFFFFF;
   background-color: #FFFFFF;
-  font-size: 14px;
+  font-size: 16px;
   color: #000000;
   text-align: center;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .sub-btn {
-  width: 136px;
-  height: 32px;
-  border-radius: 16px;
+  width: 156px;
+  height: 42px;
+  border-radius: 21px;
   border-width: 2px;
   border-color: #666666;
   background-color: #121212;
-  font-size: 13px;
+  font-size: 15px;
   color: #FFFFFF;
   text-align: center;
-  margin-top: 8px;
+  margin-top: 10px;
+}
+
+.settings-window {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  background-color: #000000;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 28px;
+  padding-bottom: 36px;
 }
 
 .cfg-title {
-  font-size: 16px;
-  color: #FFFFFF;
-  margin-bottom: 4px;
-}
-
-.cfg-row {
-  width: 176px;
-  height: 30px;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 3px;
-}
-
-.cfg-cell {
-  width: 85px;
-  height: 28px;
-  border-radius: 14px;
-  border-width: 2px;
-  border-color: #555555;
-  background-color: #101010;
-  font-size: 11px;
+  font-size: 20px;
   color: #FFFFFF;
   text-align: center;
+  margin-bottom: 12px;
 }
 
-.cfg-item-warn {
-  width: 148px;
-  height: 26px;
-  border-radius: 13px;
-  border-width: 2px;
-  border-color: #444444;
-  background-color: #080808;
-  font-size: 11px;
-  color: #AAAAAA;
-  text-align: center;
-  margin-top: 5px;
-}
-
-.cfg-play-btn {
-  width: 124px;
-  height: 32px;
-  border-radius: 16px;
+.cfg-btn-play {
+  width: 184px;
+  height: 48px;
+  border-radius: 24px;
   border-width: 2px;
   border-color: #FFFFFF;
   background-color: #FFFFFF;
-  font-size: 14px;
+  font-size: 16px;
   color: #000000;
   text-align: center;
-  margin-top: 5px;
+  margin-bottom: 12px;
+}
+
+.cfg-btn {
+  width: 184px;
+  height: 48px;
+  border-radius: 24px;
+  border-width: 2px;
+  border-color: #555555;
+  background-color: #121212;
+  font-size: 15px;
+  color: #FFFFFF;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.cfg-btn-warn {
+  width: 184px;
+  height: 48px;
+  border-radius: 24px;
+  border-width: 2px;
+  border-color: #444444;
+  background-color: #0A0A0A;
+  font-size: 15px;
+  color: #AAAAAA;
+  text-align: center;
+  margin-top: 4px;
+  margin-bottom: 24px;
 }
 </style>
