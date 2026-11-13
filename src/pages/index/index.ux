@@ -11,31 +11,22 @@
         <text class="hud-info">{{ infoText }}</text>
       </div>
 
-      <stack class="viewport" style="height: {{ viewportH }}px;">
+      <stack class="viewport">
         <chart
           class="track-chart"
-          style="height: {{ viewportH }}px;"
           type="line"
           options="{{ lineOpts }}"
           datasets="{{ lineData }}"
         ></chart>
 
-        <div class="sprite-layer" style="height: {{ viewportH }}px;">
+        <div class="sprite-layer">
           <div
             class="saw-node"
             style="left: {{ hazX }}px; top: {{ hazY }}px;"
           ></div>
           <div
-            class="saw-node"
-            style="left: {{ haz2X }}px; top: {{ haz2Y }}px;"
-          ></div>
-          <div
             class="gem-node"
             style="left: {{ gemX }}px; top: {{ gemY }}px;"
-          ></div>
-          <div
-            class="gem-node"
-            style="left: {{ gem2X }}px; top: {{ gem2Y }}px;"
           ></div>
           <div
             class="bike-wheel"
@@ -90,7 +81,6 @@
 import storage from '@system.storage'
 import vibrator from '@system.vibrator'
 import brightness from '@system.brightness'
-import device from '@system.device'
 import { createGameEngine } from '../../common/engine.js'
 
 let engineInstance = null
@@ -98,7 +88,6 @@ let loopTimer = null
 let lastTickMs = 0
 let fpsFrameCount = 0
 let fpsWindowStartMs = 0
-let watchdogTickCount = 0
 
 const sharedDataset = {
   strokeColor: '#FF1844',
@@ -111,7 +100,6 @@ const sharedLineData = [sharedDataset]
 
 export default {
   private: {
-    viewportH: 300,
     score: 0,
     bestScore: 0,
     gems: 0,
@@ -143,12 +131,8 @@ export default {
     fy: 168,
     gemX: -40,
     gemY: -40,
-    gem2X: -40,
-    gem2Y: -40,
     hazX: -50,
     hazY: -50,
-    haz2X: -50,
-    haz2Y: -50,
     lineOpts: {
       xAxis: {
         min: 0,
@@ -174,53 +158,8 @@ export default {
 
   onInit() {
     engineInstance = createGameEngine(Date.now() & 0xffffffff)
-    this.detectScreenGeometry()
     this.syncView(engineInstance.getRenderSnapshot(), true)
     this.loadSavedData()
-  },
-
-  detectScreenGeometry() {
-    try {
-      if (device && typeof device.getInfo === 'function') {
-        device.getInfo({
-          success: (info) => {
-            const w = Number(info.windowWidth || info.screenWidth || 212)
-            const h = Number(info.windowHeight || info.screenHeight || 520)
-            if (w > 0 && h > 0) {
-              const logicalH = Math.round((212 * h) / w)
-              const targetVpH = Math.max(140, Math.min(300, logicalH - 116))
-              if (targetVpH !== this.viewportH) {
-                this.viewportH = targetVpH
-                this.lineOpts = {
-                  xAxis: {
-                    min: 0,
-                    max: 10,
-                    axisTick: 10,
-                    display: false
-                  },
-                  yAxis: {
-                    min: 0,
-                    max: targetVpH,
-                    axisTick: 6,
-                    display: false
-                  },
-                  series: {
-                    lineStyle: {
-                      width: '3px',
-                      smooth: false
-                    }
-                  }
-                }
-                if (engineInstance) {
-                  engineInstance.setViewport(200, targetVpH)
-                  this.syncView(engineInstance.getRenderSnapshot(), true)
-                }
-              }
-            }
-          }
-        })
-      }
-    } catch (e) {}
   },
 
   onShow() {
@@ -266,7 +205,7 @@ export default {
   loadSavedData() {
     try {
       storage.get({
-        key: 'com_band_rider_v11',
+        key: 'com_band_rider_v12',
         success: (data) => {
           if (data) {
             try {
@@ -326,7 +265,7 @@ export default {
   saveProgress() {
     try {
       storage.set({
-        key: 'com_band_rider_v11',
+        key: 'com_band_rider_v12',
         value: JSON.stringify({
           best: this.bestScore,
           gems: this.gems,
@@ -356,7 +295,6 @@ export default {
     lastTickMs = nowInit
     fpsWindowStartMs = nowInit
     fpsFrameCount = 0
-    watchdogTickCount = 0
 
     const tick = () => {
       loopTimer = null
@@ -366,7 +304,6 @@ export default {
       const now = Date.now()
       const dt = (now - lastTickMs) * 0.001
       lastTickMs = now
-      watchdogTickCount = (watchdogTickCount + 1) & 63
 
       if (this.showFps) {
         fpsFrameCount += 1
@@ -397,10 +334,9 @@ export default {
         return
       }
 
-      const nextDelay = watchdogTickCount === 0 ? 24 : 14
-      loopTimer = setTimeout(tick, nextDelay)
+      loopTimer = setTimeout(tick, 9)
     }
-    loopTimer = setTimeout(tick, 14)
+    loopTimer = setTimeout(tick, 9)
   },
 
   stopLoop() {
@@ -427,13 +363,8 @@ export default {
 
     if (this.gemX !== snap.gemX) this.gemX = snap.gemX
     if (this.gemY !== snap.gemY) this.gemY = snap.gemY
-    if (this.gem2X !== snap.gem2X) this.gem2X = snap.gem2X
-    if (this.gem2Y !== snap.gem2Y) this.gem2Y = snap.gem2Y
-
     if (this.hazX !== snap.hazX) this.hazX = snap.hazX
     if (this.hazY !== snap.hazY) this.hazY = snap.hazY
-    if (this.haz2X !== snap.haz2X) this.haz2X = snap.haz2X
-    if (this.haz2Y !== snap.haz2Y) this.haz2Y = snap.haz2Y
 
     if (this.score !== snap.score) this.score = snap.score
     if (this.bestScore !== snap.bestScore) this.bestScore = snap.bestScore
@@ -442,7 +373,7 @@ export default {
     const nextInfo = snap.bannerText
       ? snap.bannerText
       : b.onSteepDrop
-      ? 'СБРОСЬ ГАЗ НА ГОРЕ!'
+      ? 'ПИЛА НАД ГОРОЙ — СБРОСЬ ГАЗ!'
       : 'РЕКОРД ' + snap.bestScore + '  |  КРИСТ ' + snap.gems
     if (this.infoText !== nextInfo) {
       this.infoText = nextInfo
