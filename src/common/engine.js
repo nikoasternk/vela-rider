@@ -733,4 +733,165 @@ export function createGameEngine(initialSeed = 20261110) {
       b.y += b.vy * dt
 
       const ground = sampleTerrainInto(b.x, terrainOutMain)
-      const maxSpin = state.turboFlip ? 1
+      const maxSpin = state.turboFlip ? 11.8 : 10.4
+      const spinAcc = state.turboFlip ? 42.0 : 36.0
+
+      if (isPressing) {
+        b.angVel = Math.max(-maxSpin, b.angVel - spinAcc * dt)
+      } else {
+        b.angVel *= Math.max(0, 1 - 16.0 * dt)
+        const targetAngle = ground.abyss ? 0 : ground.angle
+        const angleErr = normalizeAngle(targetAngle - b.angle)
+        if (b.airFlips > 0 && Math.abs(angleErr) < 1.45) {
+          b.angle = normalizeAngle(b.angle + angleErr * Math.min(1, 9.0 * dt))
+        }
+      }
+
+      const dTheta = b.angVel * dt
+      b.angle = normalizeAngle(b.angle + dTheta)
+      if (dTheta < 0) {
+        b.airRotation += -dTheta
+        const totalFlips = Math.floor((b.airRotation + 1.05) / 6.283185307179586)
+        if (totalFlips > b.airFlips) {
+          b.airFlips = totalFlips
+          state.score += 2 * state.combo
+          state.bannerText = 'САЛЬТО x' + b.airFlips
+          state.bannerTimer = 0.75
+          event = 'flip'
+        }
+      }
+
+      if (ground.abyss && b.y > ground.lipY + 24 && b.vy > 30) {
+        triggerCrash('В ПРОПАСТЬ!')
+        stepResult.event = 'crash'
+        return stepResult
+      }
+
+      if (b.y >= ground.y - 6 && b.vy >= -10) {
+        if (ground.abyss) {
+          triggerCrash('В ПРОПАСТЬ!')
+          stepResult.event = 'crash'
+          return stepResult
+        }
+
+        const diff = Math.abs(normalizeAngle(b.angle - ground.angle))
+        if (diff > crashAngleLimit) {
+          triggerCrash('РАЗБИЛСЯ!')
+          stepResult.event = 'crash'
+          return stepResult
+        }
+
+        b.y = ground.y - 6
+        b.onGround = true
+        b.angle = ground.angle
+        b.angVel = 0
+
+        const minLandSpeed = ground.island ? 135 : 105
+        b.speed = clamp(Math.max(b.vx, minLandSpeed), minLandSpeed, maxSpeed)
+
+        if (b.airFlips > 0) {
+          if (diff < 0.38) {
+            state.combo = Math.min(5, state.combo + 1)
+            const bonus = b.airFlips * 3 * state.combo
+            state.score += bonus
+            b.speed = Math.min(maxSpeed, b.speed + 20)
+            state.bannerText = 'ИДЕАЛЬНО +' + bonus
+            state.bannerTimer = 0.85
+          } else {
+            state.combo = 1
+            const bonus = b.airFlips * 2
+            state.score += bonus
+            state.bannerText = 'ЧИСТО +' + bonus
+            state.bannerTimer = 0.75
+          }
+          event = 'land'
+        }
+        b.airTime = 0
+        b.airRotation = 0
+        b.airFlips = 0
+      }
+    }
+
+    for (let i = 0; i < state.hazards.length; i++) {
+      if (checkSawHit(b, state.hazards[i])) {
+        triggerCrash('ПИЛА!')
+        stepResult.event = 'crash'
+        return stepResult
+      }
+    }
+
+    for (let i = 0; i < state.worldGems.length; i++) {
+      const g = state.worldGems[i]
+      if (!g.taken) {
+        const dx = g.x - b.x
+        const dy = g.y - b.y
+        if (dx * dx + dy * dy < 420) {
+          g.taken = true
+          state.gems += 1
+          state.score += 3
+          state.bannerText = 'КРИСТАЛЛ +3'
+          state.bannerTimer = 0.6
+          if (!event) event = 'gem'
+        }
+      }
+    }
+
+    const totalWorldX = state.worldOffsetX + b.x
+    const distanceScore = (totalWorldX / 90) | 0
+    if (distanceScore > state.score) {
+      state.score = distanceScore
+    }
+    if (state.score > state.bestScore) {
+      state.bestScore = state.score
+    }
+
+    while (state.lastX < b.x + 420) {
+      appendProceduralChunk()
+    }
+    while (state.segs.length > 6 && state.segs[0].x1 < b.x - 120) {
+      state.segs.shift()
+      if (physSearchHint > 0) physSearchHint -= 1
+      if (renderSearchHint > 0) renderSearchHint -= 1
+    }
+    while (state.worldGems.length > 0 && state.worldGems[0].x < b.x - 120) {
+      state.worldGems.shift()
+    }
+    while (state.hazards.length > 0 && state.hazards[0].x < b.x - 120) {
+      state.hazards.shift()
+    }
+
+    if (b.x > 40000) {
+      rebaseWorldCoordinates()
+    }
+
+    updateColors(false)
+    updateProjections()
+    stepResult.event = event
+    return stepResult
+  }
+
+  function getRenderSnapshot() {
+    renderSnapshot.status = state.status
+    renderSnapshot.crashReason = state.crashReason
+    renderSnapshot.trackColor = state.trackColor
+    renderSnapshot.score = state.score
+    renderSnapshot.bestScore = state.bestScore
+    renderSnapshot.gems = state.gems
+    renderSnapshot.bannerText = state.bannerText
+    renderSnapshot.gemX = state.gemX
+    renderSnapshot.gemY = state.gemY
+    renderSnapshot.hazX = state.hazX
+    renderSnapshot.hazY = state.hazY
+    return renderSnapshot
+  }
+
+  resetWorld()
+
+  return {
+    state,
+    setViewport,
+    startGame,
+    step,
+    getRenderSnapshot
+  }
+}
