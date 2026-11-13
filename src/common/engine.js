@@ -231,8 +231,8 @@ export function createGameEngine(initialSeed = 20261113) {
   }
 
   function addValleyRamp(withBooster, allowAbyss, allowSaws) {
-    addSegment(64, 0.88, false, false)
-    addSegment(64, 0.0, false, false)
+    addSegment(96, 0.55, false, false)
+    addSegment(96, 0.0, false, false)
     if (withBooster) {
       addBoosterPad(56)
     } else {
@@ -284,8 +284,8 @@ export function createGameEngine(initialSeed = 20261113) {
       addSegment(96, -0.85, false, false)
       addSegment(64, 0.0, false, false)
     } else if (state.lastY < 90) {
-      addSegment(96, 0.85, false, false)
-      addSegment(64, 0.0, false, false)
+      addSegment(120, 0.55, false, false)
+      addSegment(96, 0.0, false, false)
     }
   }
 
@@ -671,7 +671,7 @@ export function createGameEngine(initialSeed = 20261113) {
       const gNorm = gravity * cosA
 
       if (
-        (b.speed > 105 && dTheta > 0.045 && aReq > gNorm * 0.85) ||
+        (b.speed > 105 && dTheta > 0.045 && aReq > gNorm * 1.15) ||
         (probe.abyss && !cur.abyss && b.x > cur.x1 - 14 && b.speed > 20)
       ) {
         b.onGround = false
@@ -685,7 +685,7 @@ export function createGameEngine(initialSeed = 20261113) {
         b.vy = b.speed * Math.sin(launchAngle)
         b.angle = launchAngle
         b.y = cur.y - 6.5
-        b.angVel = isPressing ? -3.2 : 0
+        b.angVel = 0
         b.wheelie = 0
       } else {
         const next = sampleTerrainInto(nextX, terrainOutAux)
@@ -704,8 +704,8 @@ export function createGameEngine(initialSeed = 20261113) {
       b.vy += gravity * dt
       b.y += b.vy * dt
 
-      const maxSpin = state.turboFlip ? 12.2 : 10.6
-      const spinAcc = state.turboFlip ? 46.0 : 40.0
+      const maxSpin = state.turboFlip ? 13.0 : 11.4
+      const spinAcc = state.turboFlip ? 50.0 : 44.0
 
       if (isPressing) {
         b.angVel = Math.max(-maxSpin, b.angVel - spinAcc * dt)
