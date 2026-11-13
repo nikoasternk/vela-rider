@@ -231,8 +231,8 @@ export function createGameEngine(initialSeed = 20261113) {
   }
 
   function addValleyRamp(withBooster, allowAbyss, allowSaws) {
-    addSegment(96, 0.55, false, false)
-    addSegment(96, 0.0, false, false)
+    addSegment(112, 0.48, false, false)
+    addSegment(112, 0.0, false, false)
     if (withBooster) {
       addBoosterPad(56)
     } else {
@@ -284,8 +284,8 @@ export function createGameEngine(initialSeed = 20261113) {
       addSegment(96, -0.85, false, false)
       addSegment(64, 0.0, false, false)
     } else if (state.lastY < 90) {
-      addSegment(120, 0.55, false, false)
-      addSegment(96, 0.0, false, false)
+      addSegment(120, 0.48, false, false)
+      addSegment(112, 0.0, false, false)
     }
   }
 
@@ -600,7 +600,7 @@ export function createGameEngine(initialSeed = 20261113) {
     const gravity = state.difficultyMode === 0 ? 430 : state.difficultyMode === 2 ? 490 : 460
     const maxSpeed = state.difficultyMode === 2 ? 305 : 285
     const crashAngleLimit =
-      state.difficultyMode === 0 ? 1.32 : state.difficultyMode === 2 ? 0.94 : 1.12
+      state.difficultyMode === 0 ? 1.65 : state.difficultyMode === 2 ? 1.22 : 1.45
     let event = null
 
     if (b.onGround) {
@@ -664,10 +664,11 @@ export function createGameEngine(initialSeed = 20261113) {
 
       const dxMove = b.speed * cosA * dt
       const nextX = Math.max(16, b.x + dxMove)
-      const probeDist = Math.max(12, Math.abs(b.speed) * dt * 1.6)
-      const probe = sampleTerrainInto(nextX + (b.speed >= 0 ? probeDist : -probeDist), terrainOutAux)
+      const probeX = nextX + (b.speed >= 0 ? 12 : -12)
+      const actualProbeDist = Math.max(1, Math.abs(probeX - b.x))
+      const probe = sampleTerrainInto(probeX, terrainOutAux)
       const dTheta = probe.angle - cur.angle
-      const aReq = b.speed > 0 ? (b.speed * b.speed * dTheta) / probeDist : 0
+      const aReq = b.speed > 0 ? (b.speed * b.speed * dTheta) / actualProbeDist : 0
       const gNorm = gravity * cosA
 
       if (
