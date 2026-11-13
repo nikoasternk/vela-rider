@@ -110,7 +110,7 @@ for (let i = 1; i < engine.state.segs.length; i++) {
 }
 console.log('[PASS] LVGL integer chart grid & C1 continuity OK')
 
-console.log('[TEST 3/10] Checking gradual acceleration, booster pad & realistic coasting...')
+console.log('[TEST 3/10] Checking gradual acceleration, booster pad & clean coasting brake...')
 const accEngine = createGameEngine(2026)
 accEngine.startGame()
 const initialSpeed = accEngine.state.bike.speed
@@ -122,22 +122,17 @@ check(
   { initialSpeed, afterOneFrameSpeed }
 )
 for (let i = 0; i < 30; i++) accEngine.step(0.016, true)
-const speedBeforeCoast = accEngine.state.bike.speed
+const speedBeforeBrake = accEngine.state.bike.speed
 for (let i = 0; i < 40; i++) accEngine.step(0.016, false)
-const speedMidCoast = accEngine.state.bike.speed
-for (let i = 0; i < 160; i++) accEngine.step(0.016, false)
 check(
-  speedBeforeCoast > 125 &&
-    speedMidCoast < speedBeforeCoast - 35 &&
-    speedMidCoast > 20 &&
-    accEngine.state.bike.speed === 0,
-  'REALISTIC_COAST_TO_ZERO_ON_FLAT',
-  { speedBeforeCoast, speedMidCoast, speedAfterCoast: accEngine.state.bike.speed }
+  speedBeforeBrake > 125 && accEngine.state.bike.speed === 0,
+  'BRAKE_TO_ZERO_ON_FLAT',
+  { speedBeforeBrake, speedAfterBrake: accEngine.state.bike.speed }
 )
 check(accEngine.state.boosters.length >= 1, 'BOOSTER_PADS_GENERATED', {
   boosters: accEngine.state.boosters.length
 })
-console.log('[PASS] Gradual acceleration, booster pad & realistic coasting OK')
+console.log('[PASS] Gradual acceleration, booster pad & clean braking OK')
 
 console.log('[TEST 4/10] Checking pure Newtonian centripetal takeoff (v^2*k > g*cos)...')
 const launchEngine = createGameEngine(2026)
@@ -340,7 +335,7 @@ for (let i = 0; i < 15000; i++) {
   const b = proBot.state.bike
   const hold = (b.onGround && !b.onSteepDrop) || (!b.onGround && (b.airFlips < 1 || b.angle > 0.35))
   proBot.step(0.016, hold)
-  check(proBot.state.segs.length <= 42, 'ENDURANCE_SEGS_BOUNDED', {
+  check(proBot.state.segs.length <= 36, 'ENDURANCE_SEGS_BOUNDED', {
     step: i,
     segsLen: proBot.state.segs.length
   })
