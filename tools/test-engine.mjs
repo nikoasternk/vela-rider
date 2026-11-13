@@ -28,7 +28,7 @@ check(
 const uxRaw = fs.readFileSync(path.resolve('src/pages/index/index.ux'), 'utf8')
 check(
   uxRaw.includes('<scroll class="settings-window" scroll-y="true"') &&
-    uxRaw.includes('axisTick: 12'),
+    uxRaw.includes('axisTick: 16'),
   'OPTIMIZED_CHART_SPEC_AND_SETTINGS',
   {}
 )
@@ -88,11 +88,11 @@ for (let i = 0; i < 7; i++) {
 }
 console.log('[PASS] Rainbow color interpolation OK')
 
-console.log('[TEST 2/10] Checking LVGL integer chart grid (13 pts, 192x216) & C1 continuity...')
+console.log('[TEST 2/10] Checking LVGL integer chart grid (17 pts, 192x288) & C1 continuity...')
 const engine = createGameEngine(1337)
 engine.startGame()
 check(
-  CHART_POINTS === 13 && POINT_STEP === 16 && VIEW_W === 192 && (CHART_POINTS - 1) * POINT_STEP === VIEW_W,
+  CHART_POINTS === 17 && POINT_STEP === 12 && VIEW_W === 192 && (CHART_POINTS - 1) * POINT_STEP === VIEW_W,
   'EXACT_INTEGER_CHART_GRID',
   { CHART_POINTS, POINT_STEP, VIEW_W }
 )
@@ -110,7 +110,7 @@ for (let i = 1; i < engine.state.segs.length; i++) {
 }
 console.log('[PASS] LVGL integer chart grid & C1 continuity OK')
 
-console.log('[TEST 3/10] Checking gradual acceleration, booster pad & clean coasting brake...')
+console.log('[TEST 3/10] Checking gradual acceleration, booster pad & realistic coasting...')
 const accEngine = createGameEngine(2026)
 accEngine.startGame()
 const initialSpeed = accEngine.state.bike.speed
@@ -122,17 +122,22 @@ check(
   { initialSpeed, afterOneFrameSpeed }
 )
 for (let i = 0; i < 30; i++) accEngine.step(0.016, true)
-const speedBeforeBrake = accEngine.state.bike.speed
+const speedBeforeCoast = accEngine.state.bike.speed
 for (let i = 0; i < 40; i++) accEngine.step(0.016, false)
+const speedMidCoast = accEngine.state.bike.speed
+for (let i = 0; i < 160; i++) accEngine.step(0.016, false)
 check(
-  speedBeforeBrake > 125 && accEngine.state.bike.speed === 0,
-  'BRAKE_TO_ZERO_ON_FLAT',
-  { speedBeforeBrake, speedAfterBrake: accEngine.state.bike.speed }
+  speedBeforeCoast > 125 &&
+    speedMidCoast < speedBeforeCoast - 35 &&
+    speedMidCoast > 20 &&
+    accEngine.state.bike.speed === 0,
+  'REALISTIC_COAST_TO_ZERO_ON_FLAT',
+  { speedBeforeCoast, speedMidCoast, speedAfterCoast: accEngine.state.bike.speed }
 )
 check(accEngine.state.boosters.length >= 1, 'BOOSTER_PADS_GENERATED', {
   boosters: accEngine.state.boosters.length
 })
-console.log('[PASS] Gradual acceleration, booster pad & clean braking OK')
+console.log('[PASS] Gradual acceleration, booster pad & realistic coasting OK')
 
 console.log('[TEST 4/10] Checking pure Newtonian centripetal takeoff (v^2*k > g*cos)...')
 const launchEngine = createGameEngine(2026)
@@ -335,7 +340,7 @@ for (let i = 0; i < 15000; i++) {
   const b = proBot.state.bike
   const hold = (b.onGround && !b.onSteepDrop) || (!b.onGround && (b.airFlips < 1 || b.angle > 0.35))
   proBot.step(0.016, hold)
-  check(proBot.state.segs.length <= 36, 'ENDURANCE_SEGS_BOUNDED', {
+  check(proBot.state.segs.length <= 42, 'ENDURANCE_SEGS_BOUNDED', {
     step: i,
     segsLen: proBot.state.segs.length
   })
