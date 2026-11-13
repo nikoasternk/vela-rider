@@ -337,11 +337,8 @@ export function createGameEngine(initialSeed = 20261110) {
     } else if (pattern === 4) {
       addSegment(75, -0.78, true, false, false)
       addAbyssChain(1, allowAbyss, allowSaws)
-      addHighMountain(false, allowSaws)
     } else {
-      addHighMountain(true, allowSaws)
-      addSegment(75, -0.78, true, false, false)
-      addAbyssChain(2, allowAbyss, allowSaws)
+      addHighMountain(false, allowSaws)
     }
   }
 
@@ -811,10 +808,10 @@ export function createGameEngine(initialSeed = 20261110) {
       state.bestScore = state.score
     }
 
-    while (state.lastX < b.x + 620) {
+    while (state.lastX < b.x + 440) {
       appendProceduralChunk()
     }
-    while (state.segs.length > 6 && state.segs[0].x1 < b.x - 160) {
+    while (state.segs.length > 6 && state.segs[0].x1 < b.x - 120) {
       state.segs.shift()
       if (searchHint > 0) searchHint -= 1
     }
