@@ -623,7 +623,7 @@ export function createGameEngine(initialSeed = 20261113) {
         b.wheelie += (targetWheelie - b.wheelie) * Math.min(1, 10 * dt)
       } else {
         b.wheelie += (0 - b.wheelie) * Math.min(1, 14 * dt)
-        if (b.onSteepDrop && b.speed > 35) {
+        if (b.onSteepDrop && sinA < 0.45 && b.speed > 35) {
           if (b.speed > 94) {
             b.speed = Math.max(92, b.speed - 480 * dt)
           } else {
