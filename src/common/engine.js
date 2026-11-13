@@ -263,7 +263,7 @@ export function createGameEngine(initialSeed = 20261113) {
       const crestY = state.lastY
       addSegment(48, 1.35, true, false)
       addSegment(120, 1.35, true, false)
-      state.hazards.push({ x: crestX + 62, y: crestY - 12, r: 13 })
+      state.hazards.push({ x: crestX + 66, y: crestY - 14, r: 13 })
       state.worldGems.push({ x: crestX + 115, y: state.lastY - 22, taken: false })
       addSegment(72, 0.0, false, false)
       addSegment(56, 0.0, false, false)
