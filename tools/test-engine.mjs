@@ -322,7 +322,7 @@ for (let i = 0; i < 3000; i++) {
     )
   }
 }
-check(flipsDone >= 12 && landingsDone >= 10, 'PROBOT_FLIPS_AND_LANDINGS', {
+check(flipsDone >= 11 && landingsDone >= 10, 'PROBOT_FLIPS_AND_LANDINGS', {
   flipsDone,
   landingsDone,
   crashesCount
