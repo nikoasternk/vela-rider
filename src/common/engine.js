@@ -649,7 +649,7 @@ export function createGameEngine(initialSeed = 20261110) {
         b.vx = 170
         b.vy = -175
         b.y = cur.y - 7
-        b.angVel = isPressing ? -3.0 : 0
+        b.angVel = isPressing ? -3.6 : 0
       } else if ((cur.kicker && b.speed > 115) || (next.abyss && !cur.abyss)) {
         b.onGround = false
         b.onSteepDrop = false
@@ -666,7 +666,7 @@ export function createGameEngine(initialSeed = 20261110) {
           b.vx = clamp(b.speed * 0.92, 162, 178)
           b.vy = -182
           b.y = cur.y - 7
-          b.angVel = isPressing ? -3.0 : 0
+          b.angVel = isPressing ? -3.6 : 0
         }
       } else {
         b.x = nextX
@@ -685,8 +685,8 @@ export function createGameEngine(initialSeed = 20261110) {
       b.y += b.vy * dt
 
       const ground = sampleTerrainInto(b.x, terrainOutMain)
-      const maxSpin = state.turboFlip ? 11.8 : 10.4
-      const spinAcc = state.turboFlip ? 42.0 : 36.0
+      const maxSpin = state.turboFlip ? 13.5 : 12.2
+      const spinAcc = state.turboFlip ? 48.0 : 44.0
 
       if (isPressing) {
         b.angVel = Math.max(-maxSpin, b.angVel - spinAcc * dt)
