@@ -185,7 +185,7 @@ safeBot.state.bike.y = crestSafe.y0 + 18
 safeBot.state.bike.speed = 135
 safeBot.state.bike.onGround = true
 let minClearance = 9999
-for (let i = 0; i < 125; i++) {
+for (let i = 0; i < 140; i++) {
   safeBot.step(0.016, false)
   const d = Math.hypot(overSaw.x - safeBot.state.bike.x, overSaw.y - safeBot.state.bike.y)
   if (d < minClearance) minClearance = d
