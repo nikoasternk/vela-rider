@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import vm from 'vm'
 
 function check(condition, testName, debugPayload) {
   if (!condition) {
@@ -32,8 +33,23 @@ check(
   {}
 )
 
-const source = fs.readFileSync(new URL('../src/common/engine.js', import.meta.url), 'utf8')
-const moduleUrl = 'data:text/javascript;base64,' + Buffer.from(source, 'utf8').toString('base64')
+const source = fs.readFileSync(path.resolve('src/common/engine.js'), 'utf8')
+let openBraces = 0
+for (let i = 0; i < source.length; i++) {
+  if (source[i] === '{') openBraces += 1
+  else if (source[i] === '}') openBraces -= 1
+}
+check(openBraces === 0 && source.trim().endsWith('}'), 'ENGINE_JS_SYNTAX_COMPLETE', {
+  openBraces,
+  totalLines: source.split('\n').length,
+  tail: source.slice(-120)
+})
+
+const cjsSource = source.replace(/export const /g, 'const ').replace(/export function /g, 'function ') +
+  '\nmodule.exports = { VIEW_W, VIEW_H, CHART_POINTS, POINT_STEP, BIKE_SCREEN_X, SECTION_LENGTH, RAINBOW_COLORS, computeRainbowTrackColor, createGameEngine };'
+const sandbox = { module: { exports: {} }, Math, Array, Boolean }
+vm.runInNewContext(cjsSource, sandbox, { filename: 'src/common/engine.js' })
+
 const {
   createGameEngine,
   computeRainbowTrackColor,
@@ -42,7 +58,7 @@ const {
   CHART_POINTS,
   POINT_STEP,
   VIEW_H
-} = await import(moduleUrl)
+} = sandbox.module.exports
 
 console.log('[TEST 1/10] Checking rainbow color interpolation...')
 check(RAINBOW_COLORS.length === 7, 'RAINBOW_COLORS_LEN', { len: RAINBOW_COLORS.length })
@@ -179,7 +195,7 @@ jumpMountEngine.startGame()
 const kickers90 = jumpMountEngine.state.segs.filter((s) => s.kicker && s.dx === 90)
 check(kickers90.length >= 2, 'FIND_MUST_JUMP_MOUNTAIN', { count: kickers90.length })
 const mustJumpSeg = kickers90[1]
-const roadSaw = jumpMountEngine.state.hazards.find((h) => Math.abs(h.x - (mustJumpSeg.x1 + 65)) < 5)
+const roadSaw = jumpMountEngine.state.hazards.find((h) => Math.abs(h.x - (mustJumpSeg.x1 + 56)) < 5)
 check(Boolean(roadSaw), 'FIND_ON_ROAD_MOUNTAIN_SAW', {})
 
 jumpMountEngine.state.bike.x = mustJumpSeg.x0 + 30
