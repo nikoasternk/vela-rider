@@ -46,9 +46,7 @@ export function computeRainbowTrackColor(worldX) {
   const sectionInt = uTotal | 0
   const idx = sectionInt % 7
   const localU = uTotal - sectionInt
-  if (localU <= 0.84) {
-    return RAINBOW_COLORS[idx]
-  }
+  if (localU <= 0.84) return RAINBOW_COLORS[idx]
   const t = clamp((localU - 0.84) / 0.16, 0, 1)
   const s = t * t * (3 - 2 * t)
   const c0 = RAINBOW_RGB[idx]
@@ -70,9 +68,7 @@ export function createGameEngine(initialSeed = 20261110) {
   }
 
   const chartData = new Array(CHART_POINTS)
-  for (let i = 0; i < CHART_POINTS; i++) {
-    chartData[i] = 140
-  }
+  for (let i = 0; i < CHART_POINTS; i++) chartData[i] = 140
 
   const state = {
     status: 'menu',
@@ -155,9 +151,7 @@ export function createGameEngine(initialSeed = 20261110) {
     lipY: 180
   }
 
-  const stepResult = {
-    event: null
-  }
+  const stepResult = { event: null }
 
   const renderSnapshot = {
     status: 'menu',
@@ -181,8 +175,6 @@ export function createGameEngine(initialSeed = 20261110) {
     const m0 = state.lastM
     const x1 = x0 + dx
     const y1 = y0 + dx * 0.5 * (m0 + nextM)
-    const c1 = dx * m0
-    const c2 = dx * 0.5 * (nextM - m0)
     state.segs.push({
       x0,
       x1,
@@ -193,8 +185,8 @@ export function createGameEngine(initialSeed = 20261110) {
       m1: nextM,
       dm: nextM - m0,
       invDx: 1.0 / dx,
-      c1,
-      c2,
+      c1: dx * m0,
+      c2: dx * 0.5 * (nextM - m0),
       kicker: Boolean(isKicker),
       abyss: Boolean(isAbyss),
       steepDrop: Boolean(isSteepDrop),
@@ -223,18 +215,10 @@ export function createGameEngine(initialSeed = 20261110) {
     pushRawSegment(36, -1.65, false, true, false, false, false, lipY)
     pushRawSegment(36, 0.0, false, true, false, false, false, lipY)
     if (allowSaws && withSaw) {
-      state.hazards.push({
-        x: lipX + 54,
-        y: lipY + 42,
-        r: 13
-      })
+      state.hazards.push({ x: lipX + 54, y: lipY + 42, r: 13 })
     }
     if (withGem) {
-      state.worldGems.push({
-        x: lipX + 54,
-        y: lipY - 40,
-        taken: false
-      })
+      state.worldGems.push({ x: lipX + 54, y: lipY - 40, taken: false })
     }
   }
 
@@ -244,11 +228,7 @@ export function createGameEngine(initialSeed = 20261110) {
     addSegment(78, 0.0, false, false, true)
     addSegment(66, -0.78, true, false, true)
     if (withGem) {
-      state.worldGems.push({
-        x: xMid,
-        y: yMid - 22,
-        taken: false
-      })
+      state.worldGems.push({ x: xMid, y: yMid - 22, taken: false })
     }
   }
 
@@ -269,13 +249,9 @@ export function createGameEngine(initialSeed = 20261110) {
       addSegment(90, -0.82, true, false, false)
       const peakX = state.lastX
       const peakY = state.lastY
-      state.worldGems.push({
-        x: peakX + 55,
-        y: peakY - 46,
-        taken: false
-      })
-      addSegment(65, 1.15, false, false, false)
-      addSegment(135, 1.15, false, false, false)
+      state.worldGems.push({ x: peakX + 55, y: peakY - 46, taken: false })
+      addSegment(32, 0.45, false, false, false)
+      addSegment(150, 1.22, false, false, false)
       addSegment(85, 0.0, false, false, false)
       addSegment(65, 0.0, false, false, false)
     } else if (mode === 1) {
@@ -286,16 +262,8 @@ export function createGameEngine(initialSeed = 20261110) {
       pushRawSegment(36, 0.0, false, false, true, true, false, peakStartY)
       addSegment(50, 1.35, false, false, false)
       addSegment(130, 1.35, false, false, false)
-      state.hazards.push({
-        x: peakStartX + 80,
-        y: peakStartY - 35,
-        r: 13
-      })
-      state.worldGems.push({
-        x: peakStartX + 125,
-        y: state.lastY - 26,
-        taken: false
-      })
+      state.hazards.push({ x: peakStartX + 80, y: peakStartY - 35, r: 13 })
+      state.worldGems.push({ x: peakStartX + 125, y: state.lastY - 26, taken: false })
       addSegment(85, 0.0, false, false, false)
       addSegment(65, 0.0, false, false, false)
     } else {
@@ -303,18 +271,10 @@ export function createGameEngine(initialSeed = 20261110) {
       addSegment(90, -0.82, true, false, false)
       const peakX = state.lastX
       const peakY = state.lastY
-      addSegment(65, 1.15, false, false, false)
-      addSegment(135, 1.15, false, false, false)
-      state.hazards.push({
-        x: peakX + 65,
-        y: peakY + 5,
-        r: 13
-      })
-      state.worldGems.push({
-        x: peakX + 65,
-        y: peakY - 48,
-        taken: false
-      })
+      addSegment(32, 0.45, false, false, false)
+      addSegment(150, 1.22, false, false, false)
+      state.hazards.push({ x: peakX + 56, y: peakY + 2, r: 13 })
+      state.worldGems.push({ x: peakX + 56, y: peakY - 48, taken: false })
       addSegment(85, 0.0, false, false, false)
       addSegment(65, 0.0, false, false, false)
     }
@@ -459,12 +419,8 @@ export function createGameEngine(initialSeed = 20261110) {
       state.segs[i].x0 -= shift
       state.segs[i].x1 -= shift
     }
-    for (let i = 0; i < state.worldGems.length; i++) {
-      state.worldGems[i].x -= shift
-    }
-    for (let i = 0; i < state.hazards.length; i++) {
-      state.hazards[i].x -= shift
-    }
+    for (let i = 0; i < state.worldGems.length; i++) state.worldGems[i].x -= shift
+    for (let i = 0; i < state.hazards.length; i++) state.hazards[i].x -= shift
   }
 
   function updateProjections() {
@@ -590,9 +546,7 @@ export function createGameEngine(initialSeed = 20261110) {
     state.crashReason = reason
     state.bannerText = reason
     state.bannerTimer = 2.0
-    if (state.score > state.bestScore) {
-      state.bestScore = state.score
-    }
+    if (state.score > state.bestScore) state.bestScore = state.score
     updateProjections()
   }
 
@@ -628,9 +582,7 @@ export function createGameEngine(initialSeed = 20261110) {
 
     if (state.bannerTimer > 0) {
       state.bannerTimer = Math.max(0, state.bannerTimer - dt)
-      if (state.bannerTimer === 0 && state.status === 'playing') {
-        state.bannerText = ''
-      }
+      if (state.bannerTimer === 0 && state.status === 'playing') state.bannerText = ''
     }
 
     if (state.status !== 'playing') {
@@ -838,31 +790,19 @@ export function createGameEngine(initialSeed = 20261110) {
 
     const totalWorldX = state.worldOffsetX + b.x
     const distanceScore = (totalWorldX / 90) | 0
-    if (distanceScore > state.score) {
-      state.score = distanceScore
-    }
-    if (state.score > state.bestScore) {
-      state.bestScore = state.score
-    }
+    if (distanceScore > state.score) state.score = distanceScore
+    if (state.score > state.bestScore) state.bestScore = state.score
 
-    while (state.lastX < b.x + 420) {
-      appendProceduralChunk()
-    }
+    while (state.lastX < b.x + 420) appendProceduralChunk()
     while (state.segs.length > 6 && state.segs[0].x1 < b.x - 120) {
       state.segs.shift()
       if (physSearchHint > 0) physSearchHint -= 1
       if (renderSearchHint > 0) renderSearchHint -= 1
     }
-    while (state.worldGems.length > 0 && state.worldGems[0].x < b.x - 120) {
-      state.worldGems.shift()
-    }
-    while (state.hazards.length > 0 && state.hazards[0].x < b.x - 120) {
-      state.hazards.shift()
-    }
+    while (state.worldGems.length > 0 && state.worldGems[0].x < b.x - 120) state.worldGems.shift()
+    while (state.hazards.length > 0 && state.hazards[0].x < b.x - 120) state.hazards.shift()
 
-    if (b.x > 40000) {
-      rebaseWorldCoordinates()
-    }
+    if (b.x > 40000) rebaseWorldCoordinates()
 
     updateColors(false)
     updateProjections()
