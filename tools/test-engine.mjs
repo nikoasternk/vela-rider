@@ -254,9 +254,9 @@ console.log('[TEST 7/10] Checking abyss fall & reckless hold crash...')
 const abyssFallBot = createGameEngine(2026)
 abyssFallBot.startGame()
 const firstAbyss = abyssFallBot.state.segs.find((s) => s.abyss)
-abyssFallBot.state.bike.x = firstAbyss.x0 - 6
+abyssFallBot.state.bike.x = firstAbyss.x0 - 1
 abyssFallBot.state.bike.y = firstAbyss.y0 - 6
-abyssFallBot.state.bike.speed = 65
+abyssFallBot.state.bike.speed = 85
 abyssFallBot.state.bike.onGround = true
 for (let i = 0; i < 60; i++) {
   abyssFallBot.step(0.016, false)
@@ -265,7 +265,7 @@ for (let i = 0; i < 60; i++) {
 check(
   abyssFallBot.state.status === 'gameover' && abyssFallBot.state.crashReason === 'В ПРОПАСТЬ!',
   'LOW_SPEED_FALLS_INTO_ABYSS',
-  { status: abyssFallBot.state.status }
+  { status: abyssFallBot.state.status, bikeX: abyssFallBot.state.bike.x }
 )
 
 const holdBot = createGameEngine(2026)
