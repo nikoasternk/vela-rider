@@ -92,6 +92,7 @@ export function createGameEngine(initialSeed = 20261110) {
     viewW: VIEW_W,
     viewH: VIEW_H,
     camY: 0,
+    worldOffsetX: 0,
     segs: [],
     lastX: 0,
     lastY: 180,
@@ -130,6 +131,56 @@ export function createGameEngine(initialSeed = 20261110) {
     chartData
   }
 
+  const terrainOutMain = {
+    x0: 0,
+    x1: 100,
+    y: 180,
+    m: 0,
+    angle: 0,
+    kicker: false,
+    abyss: false,
+    steepDrop: false,
+    island: false,
+    lipY: 180
+  }
+
+  const terrainOutAux = {
+    x0: 0,
+    x1: 100,
+    y: 180,
+    m: 0,
+    angle: 0,
+    kicker: false,
+    abyss: false,
+    steepDrop: false,
+    island: false,
+    lipY: 180
+  }
+
+  const stepResult = {
+    event: null
+  }
+
+  const renderSnapshot = {
+    status: 'menu',
+    crashReason: '',
+    trackColor: RAINBOW_COLORS[0],
+    score: 0,
+    bestScore: 0,
+    gems: 0,
+    bannerText: '',
+    bike: state.bike,
+    chartData: state.chartData,
+    gemX: -40,
+    gemY: -40,
+    gem2X: -40,
+    gem2Y: -40,
+    hazX: -50,
+    hazY: -50,
+    haz2X: -50,
+    haz2Y: -50
+  }
+
   function addSegment(dx, nextM, isKicker, isSteepDrop, isIsland) {
     const x0 = state.lastX
     const y0 = state.lastY
@@ -163,7 +214,7 @@ export function createGameEngine(initialSeed = 20261110) {
 
   function addAbyss(dx, dyLanding, allowAbyss, allowSaws, withSaw, withGem) {
     if (!allowAbyss) {
-      addSegment(dx * 0.5, 0.35, false, false, false)
+      addSegment(dx * 0.5, 0.25, false, false, false)
       addSegment(dx * 0.5, 0.0, false, false, false)
       return
     }
@@ -207,41 +258,39 @@ export function createGameEngine(initialSeed = 20261110) {
     }
     state.lastX = x1
     state.lastY = y1
-    state.lastM = 0.12
+    state.lastM = 0.0
   }
 
-  function addSmallIsland(width, kickSlope, withGem) {
-    const landW = Math.round(width * 0.42)
-    const kickW = width - landW
-    const xMid = state.lastX + landW
+  function addRoadIsland(withGem) {
+    const xMid = state.lastX + 45
     const yMid = state.lastY
-    addSegment(landW, 0.0, false, false, true)
-    addSegment(kickW, kickSlope, true, false, true)
+    addSegment(75, 0.0, false, false, true)
+    addSegment(65, -0.78, true, false, true)
     if (withGem) {
       state.worldGems.push({
         x: xMid,
-        y: yMid - 26,
+        y: yMid - 24,
         taken: false
       })
     }
   }
 
-  function addIslandChain(islandCount, allowAbyss, allowSaws) {
+  function addAbyssChain(islandCount, allowAbyss, allowSaws) {
     for (let i = 0; i < islandCount; i++) {
-      addAbyss(98, 14, allowAbyss, allowSaws, i % 2 === 0, true)
-      addSmallIsland(76, -0.78, i % 2 === 1)
+      addAbyss(92, 16, allowAbyss, allowSaws, true, true)
+      addRoadIsland(i % 2 === 0)
     }
-    addAbyss(98, 14, allowAbyss, allowSaws, true, true)
-    addSegment(85, 0.22, false, false, false)
-    addSegment(70, 0.0, false, false, false)
+    addAbyss(92, 16, allowAbyss, allowSaws, true, true)
+    addSegment(85, 0.0, false, false, false)
+    addSegment(65, 0.0, false, false, false)
   }
 
-  function addMountainSteepDescent(allowSaws, doubleTier) {
-    addSegment(125, -1.18, false, false, false)
-    addSegment(95, -0.92, false, false, false)
-    addSegment(54, 0.0, false, false, false)
+  function addHighMountainWithSaw(allowSaws, wideDouble) {
+    addSegment(135, -1.18, false, false, false)
+    addSegment(110, -0.96, false, false, false)
+    addSegment(62, 0.0, false, false, false)
     state.worldGems.push({
-      x: state.lastX - 18,
+      x: state.lastX - 22,
       y: state.lastY - 22,
       taken: false
     })
@@ -249,7 +298,7 @@ export function createGameEngine(initialSeed = 20261110) {
     const crest1X = state.lastX
     const crest1Y = state.lastY
     addSegment(46, 1.48, false, true, false)
-    addSegment(125, 1.48, false, true, false)
+    addSegment(135, 1.48, false, true, false)
     if (allowSaws) {
       state.hazards.push({
         x: crest1X + 68,
@@ -258,17 +307,17 @@ export function createGameEngine(initialSeed = 20261110) {
       })
     }
     state.worldGems.push({
-      x: crest1X + 115,
-      y: state.lastY - 28,
+      x: crest1X + 120,
+      y: state.lastY - 26,
       taken: false
     })
 
-    if (doubleTier) {
-      addSegment(64, 0.0, false, false, false)
+    if (wideDouble) {
+      addSegment(72, 0.0, false, false, false)
       const crest2X = state.lastX
       const crest2Y = state.lastY
       addSegment(46, 1.48, false, true, false)
-      addSegment(120, 1.48, false, true, false)
+      addSegment(125, 1.48, false, true, false)
       if (allowSaws) {
         state.hazards.push({
           x: crest2X + 68,
@@ -278,53 +327,44 @@ export function createGameEngine(initialSeed = 20261110) {
       }
     }
 
-    addSegment(85, 0.30, false, false, false)
-    addSegment(75, 0.0, false, false, false)
+    addSegment(90, 0.0, false, false, false)
+    addSegment(70, 0.0, false, false, false)
+
+    if (state.lastY > 240) {
+      addSegment(110, -0.85, false, false, false)
+      addSegment(65, 0.0, false, false, false)
+    } else if (state.lastY < 120) {
+      addSegment(110, 0.85, false, false, false)
+      addSegment(65, 0.0, false, false, false)
+    }
   }
 
   function appendProceduralChunk() {
     const allowAbyss = state.obstacleMode !== 2
     const allowSaws = state.obstacleMode === 0
-    const pattern = (state.chunkCounter + ((nextRand() * 2) | 0)) % 6
+    const pattern = (state.chunkCounter + ((nextRand() * 2) | 0)) % 5
     state.chunkCounter += 1
 
     if (pattern === 0) {
-      addSegment(80, -0.78, true, false, false)
-      addIslandChain(2, allowAbyss, allowSaws)
+      addSegment(75, -0.78, true, false, false)
+      addAbyssChain(2, allowAbyss, allowSaws)
     } else if (pattern === 1) {
-      addMountainSteepDescent(allowSaws, false)
-      addSegment(82, -0.80, true, false, false)
-      addIslandChain(1, allowAbyss, allowSaws)
+      addHighMountainWithSaw(allowSaws, false)
+      addSegment(75, -0.78, true, false, false)
+      addAbyssChain(1, allowAbyss, allowSaws)
     } else if (pattern === 2) {
-      addSegment(82, -0.78, true, false, false)
-      addIslandChain(3, allowAbyss, allowSaws)
-    } else if (pattern === 3) {
-      addMountainSteepDescent(allowSaws, true)
-      addSegment(85, -0.82, true, false, false)
-      addAbyss(98, 12, allowAbyss, allowSaws, true, true)
-      addSegment(85, 0.25, false, false, false)
+      addHighMountainWithSaw(allowSaws, true)
+      addSegment(75, -0.78, true, false, false)
+      addAbyss(92, 16, allowAbyss, allowSaws, true, true)
+      addSegment(90, 0.0, false, false, false)
       addSegment(70, 0.0, false, false, false)
-    } else if (pattern === 4) {
-      addSegment(115, -1.12, false, false, false)
-      addSegment(55, 0.0, false, false, false)
-      const cX = state.lastX
-      const cY = state.lastY
-      addSegment(46, 1.48, false, true, false)
-      addSegment(118, 1.48, false, true, false)
-      if (allowSaws) {
-        state.hazards.push({
-          x: cX + 68,
-          y: cY + 22,
-          r: 14
-        })
-      }
-      addSegment(75, 0.0, false, false, false)
-      addSegment(82, -0.80, true, false, false)
-      addIslandChain(2, allowAbyss, allowSaws)
+    } else if (pattern === 3) {
+      addSegment(75, -0.78, true, false, false)
+      addAbyssChain(3, allowAbyss, allowSaws)
     } else {
-      addMountainSteepDescent(allowSaws, false)
-      addSegment(80, -0.78, true, false, false)
-      addIslandChain(3, allowAbyss, allowSaws)
+      addHighMountainWithSaw(allowSaws, false)
+      addSegment(75, -0.78, true, false, false)
+      addAbyssChain(2, allowAbyss, allowSaws)
     }
   }
 
@@ -360,7 +400,7 @@ export function createGameEngine(initialSeed = 20261110) {
         searchHint = i
         const localX = clamp(wx - s.x0, 0, s.dx)
         if (s.abyss) {
-          const wallW = 42
+          const wallW = 40
           const abyssFloor = s.lipY + pitDepth
           if (localX < wallW) {
             const t = localX / wallW
@@ -382,7 +422,7 @@ export function createGameEngine(initialSeed = 20261110) {
     return state.lastY
   }
 
-  function sampleTerrain(wx) {
+  function sampleTerrainInto(wx, out) {
     const segs = state.segs
     const len = segs.length
     if (searchHint >= len) searchHint = 0
@@ -395,32 +435,30 @@ export function createGameEngine(initialSeed = 20261110) {
         const u = clamp((wx - s.x0) * s.invDx, 0, 1)
         const y = s.y0 + u * (s.c1 + u * s.c2)
         const m = s.m0 + u * s.dm
-        return {
-          x0: s.x0,
-          x1: s.x1,
-          y,
-          m,
-          angle: Math.atan2(m, 1),
-          kicker: s.kicker && u > 0.86,
-          abyss: s.abyss,
-          steepDrop: s.steepDrop,
-          island: s.island,
-          lipY: s.lipY
-        }
+        out.x0 = s.x0
+        out.x1 = s.x1
+        out.y = y
+        out.m = m
+        out.angle = Math.atan2(m, 1)
+        out.kicker = s.kicker && u > 0.86
+        out.abyss = s.abyss
+        out.steepDrop = s.steepDrop
+        out.island = s.island
+        out.lipY = s.lipY
+        return out
       }
     }
-    return {
-      x0: 0,
-      x1: 100,
-      y: state.lastY,
-      m: 0,
-      angle: 0,
-      kicker: false,
-      abyss: false,
-      steepDrop: false,
-      island: false,
-      lipY: 0
-    }
+    out.x0 = 0
+    out.x1 = 100
+    out.y = state.lastY
+    out.m = 0
+    out.angle = 0
+    out.kicker = false
+    out.abyss = false
+    out.steepDrop = false
+    out.island = false
+    out.lipY = state.lastY
+    return out
   }
 
   let colorTick = 0
@@ -428,7 +466,24 @@ export function createGameEngine(initialSeed = 20261110) {
   function updateColors(force) {
     colorTick = (colorTick + 1) % 3
     if (force || colorTick === 0) {
-      state.trackColor = computeRainbowTrackColor(state.bike.x)
+      state.trackColor = computeRainbowTrackColor(state.worldOffsetX + state.bike.x)
+    }
+  }
+
+  function rebaseWorldCoordinates() {
+    const shift = 30000
+    state.worldOffsetX += shift
+    state.bike.x -= shift
+    state.lastX -= shift
+    for (let i = 0; i < state.segs.length; i++) {
+      state.segs[i].x0 -= shift
+      state.segs[i].x1 -= shift
+    }
+    for (let i = 0; i < state.worldGems.length; i++) {
+      state.worldGems[i].x -= shift
+    }
+    for (let i = 0; i < state.hazards.length; i++) {
+      state.hazards[i].x -= shift
     }
   }
 
@@ -536,9 +591,10 @@ export function createGameEngine(initialSeed = 20261110) {
   }
 
   function resetWorld() {
-    state.segs = []
-    state.worldGems = []
-    state.hazards = []
+    state.segs.length = 0
+    state.worldGems.length = 0
+    state.hazards.length = 0
+    state.worldOffsetX = 0
     state.lastX = 0
     state.lastY = 180
     state.lastM = 0
@@ -548,16 +604,16 @@ export function createGameEngine(initialSeed = 20261110) {
     const allowAbyss = state.obstacleMode !== 2
     const allowSaws = state.obstacleMode === 0
 
-    addSegment(65, 0.0, false, false, false)
-    addSegment(80, -0.78, true, false, false)
-    addIslandChain(1, allowAbyss, allowSaws)
-    addMountainSteepDescent(allowSaws, false)
+    addSegment(95, 0.0, false, false, false)
+    addSegment(75, -0.78, true, false, false)
+    addAbyssChain(1, allowAbyss, allowSaws)
+    addHighMountainWithSaw(allowSaws, false)
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 4; i++) {
       appendProceduralChunk()
     }
 
-    const startSample = sampleTerrain(50)
+    const startSample = sampleTerrainInto(50, terrainOutMain)
     state.bike.x = 50
     state.bike.y = startSample.y - 6
     state.bike.vx = 95
@@ -610,58 +666,68 @@ export function createGameEngine(initialSeed = 20261110) {
 
     if (state.status !== 'playing') {
       updateProjections()
-      return { event }
+      stepResult.event = null
+      return stepResult
     }
 
     const b = state.bike
-    const gravity = state.difficultyMode === 0 ? 480 : 510
+    const gravity = state.difficultyMode === 0 ? 480 : 500
     const maxSpeed = state.difficultyMode === 2 ? 295 : 275
     const crashAngleLimit =
-      state.difficultyMode === 0 ? 1.35 : state.difficultyMode === 2 ? 0.96 : 1.12
+      state.difficultyMode === 0 ? 1.35 : state.difficultyMode === 2 ? 0.96 : 1.15
 
     if (b.onGround) {
-      const cur = sampleTerrain(b.x)
-      const ahead = sampleTerrain(b.x + 28)
+      const cur = sampleTerrainInto(b.x, terrainOutMain)
+      const ahead = sampleTerrainInto(b.x + 55, terrainOutAux)
       b.onSteepDrop = cur.steepDrop || ahead.steepDrop
 
       if (cur.abyss && b.y > cur.lipY + 24) {
         triggerCrash('В ПРОПАСТЬ!')
-        return { event: 'crash' }
+        stepResult.event = 'crash'
+        return stepResult
       }
 
+      const sinA = Math.sin(cur.angle)
       if (isPressing) {
         if (b.speed < 148) {
           b.speed += 450 * dt
         }
-        const uphillBoost = cur.angle < 0 ? -Math.sin(cur.angle) * 120 : 0
-        const downhillBoost = cur.angle > 0 ? Math.sin(cur.angle) * 215 : 0
+        const uphillBoost = sinA < 0 ? -sinA * 125 : 0
+        const downhillBoost = sinA > 0 ? sinA * 215 : 0
         b.speed += (275 + uphillBoost + downhillBoost) * dt
       } else {
-        const slopeGravity = Math.sin(cur.angle) * 240
-        b.speed += slopeGravity * dt
-        b.speed *= 1 - 0.38 * dt
-        if (cur.steepDrop && b.speed > 158) {
-          b.speed = 158
+        if (b.onSteepDrop && b.speed > 140) {
+          b.speed = Math.max(136, b.speed - 240 * dt)
+        } else if (sinA > 0.12) {
+          const targetCoast = cur.steepDrop ? 138 : 150
+          if (b.speed < targetCoast) {
+            b.speed = Math.min(targetCoast, b.speed + sinA * 220 * dt)
+          } else {
+            b.speed = Math.max(targetCoast, b.speed - 140 * dt)
+          }
+        } else {
+          const uphillBrake = sinA < 0 ? -sinA * 260 : 0
+          b.speed = Math.max(0, b.speed - (110 + uphillBrake) * dt)
         }
       }
 
-      b.speed = clamp(b.speed, 38, maxSpeed)
+      b.speed = clamp(b.speed, 0, maxSpeed)
 
       const stepDist = b.speed * dt
-      const nextX = b.x + Math.max(1.2, stepDist * Math.cos(cur.angle * 0.65))
-      const next = sampleTerrain(nextX)
+      const nextX = b.x + stepDist * Math.cos(cur.angle * 0.65)
+      const next = sampleTerrainInto(nextX, terrainOutAux)
 
-      if (cur.steepDrop && isPressing && b.speed > 130 && b.x < cur.x0 + 38) {
+      if (cur.steepDrop && (isPressing || b.speed > 162) && b.speed > 125 && b.x < cur.x0 + 38) {
         b.onGround = false
         b.onSteepDrop = false
         b.airTime = 0
         b.airRotation = 0
         b.airFlips = 0
         b.x = nextX
-        b.vx = clamp(b.speed, 168, 202)
+        b.vx = clamp(b.speed, 170, 200)
         b.vy = -12
         b.y = cur.y - 6
-        b.angVel = -2.4
+        b.angVel = isPressing ? -2.4 : 0
       } else if ((cur.kicker && b.speed > 115) || (next.abyss && !cur.abyss)) {
         b.onGround = false
         b.onSteepDrop = false
@@ -670,17 +736,15 @@ export function createGameEngine(initialSeed = 20261110) {
         b.airFlips = 0
         b.x = nextX
         if (b.speed < 115 && !isPressing) {
-          b.vx = b.speed * Math.cos(cur.angle)
+          b.vx = Math.max(45, b.speed * Math.cos(cur.angle))
           b.vy = b.speed * Math.sin(cur.angle)
           b.y = cur.y - 6
           b.angVel = 0
         } else {
-          const launchAngle = clamp(cur.angle, -0.78, -0.52)
-          const effSpeed = Math.max(b.speed, cur.island ? 176 : 168)
-          b.vx = clamp(effSpeed * Math.cos(launchAngle) * 1.18, 162, 225)
-          b.vy = Math.min(-162, effSpeed * Math.sin(launchAngle) * 1.22 - 28)
+          b.vx = clamp(b.speed * 0.92, 154, 170)
+          b.vy = -172
           b.y = cur.y - 7
-          b.angVel = isPressing ? -2.5 : 0
+          b.angVel = isPressing ? -2.6 : 0
         }
       } else {
         b.x = nextX
@@ -698,13 +762,16 @@ export function createGameEngine(initialSeed = 20261110) {
       b.vy += gravity * dt
       b.y += b.vy * dt
 
-      const maxSpin = state.turboFlip ? 10.6 : 8.4
-      const spinAcc = state.turboFlip ? 38.0 : 28.0
+      const maxSpin = state.turboFlip ? 10.6 : 8.6
+      const spinAcc = state.turboFlip ? 38.0 : 29.0
 
       if (isPressing) {
         b.angVel = Math.max(-maxSpin, b.angVel - spinAcc * dt)
       } else {
         b.angVel *= Math.max(0, 1 - 16.0 * dt)
+        if (b.airFlips > 0 && Math.abs(b.angle) < 1.35) {
+          b.angle *= Math.max(0, 1 - 8.0 * dt)
+        }
       }
 
       const dTheta = b.angVel * dt
@@ -721,22 +788,25 @@ export function createGameEngine(initialSeed = 20261110) {
         }
       }
 
-      const ground = sampleTerrain(b.x)
-      if (ground.abyss && b.y > ground.lipY + 36 && b.vy > 40) {
+      const ground = sampleTerrainInto(b.x, terrainOutMain)
+      if (ground.abyss && b.y > ground.lipY + 34 && b.vy > 35) {
         triggerCrash('В ПРОПАСТЬ!')
-        return { event: 'crash' }
+        stepResult.event = 'crash'
+        return stepResult
       }
 
       if (b.y >= ground.y - 6 && b.vy >= -10) {
         if (ground.abyss) {
           triggerCrash('В ПРОПАСТЬ!')
-          return { event: 'crash' }
+          stepResult.event = 'crash'
+          return stepResult
         }
 
         const diff = Math.abs(normalizeAngle(b.angle - ground.angle))
         if (diff > crashAngleLimit) {
           triggerCrash('РАЗБИЛСЯ!')
-          return { event: 'crash' }
+          stepResult.event = 'crash'
+          return stepResult
         }
 
         b.y = ground.y - 6
@@ -745,11 +815,11 @@ export function createGameEngine(initialSeed = 20261110) {
         b.angVel = 0
 
         const impactSpeed = Math.hypot(b.vx, b.vy)
-        const minLandSpeed = ground.island ? 162 : 120
+        const minLandSpeed = ground.island ? 158 : 125
         b.speed = clamp(Math.max(b.speed, impactSpeed * 0.88), minLandSpeed, maxSpeed)
 
         if (b.airFlips > 0) {
-          if (diff < 0.35) {
+          if (diff < 0.38) {
             state.combo = Math.min(5, state.combo + 1)
             const bonus = b.airFlips * 3 * state.combo
             state.score += bonus
@@ -777,7 +847,8 @@ export function createGameEngine(initialSeed = 20261110) {
       const dy = h.y - b.y
       if (dx * dx + dy * dy < 210) {
         triggerCrash('ПИЛА!')
-        return { event: 'crash' }
+        stepResult.event = 'crash'
+        return stepResult
       }
     }
 
@@ -797,7 +868,8 @@ export function createGameEngine(initialSeed = 20261110) {
       }
     }
 
-    const distanceScore = (b.x / 90) | 0
+    const totalWorldX = state.worldOffsetX + b.x
+    const distanceScore = (totalWorldX / 90) | 0
     if (distanceScore > state.score) {
       state.score = distanceScore
     }
@@ -808,42 +880,44 @@ export function createGameEngine(initialSeed = 20261110) {
     while (state.lastX < b.x + 620) {
       appendProceduralChunk()
     }
-    while (state.segs.length > 8 && state.segs[0].x1 < b.x - 180) {
+    while (state.segs.length > 6 && state.segs[0].x1 < b.x - 160) {
       state.segs.shift()
       if (searchHint > 0) searchHint -= 1
     }
-    while (state.worldGems.length > 0 && state.worldGems[0].x < b.x - 140) {
+    while (state.worldGems.length > 0 && state.worldGems[0].x < b.x - 120) {
       state.worldGems.shift()
     }
-    while (state.hazards.length > 0 && state.hazards[0].x < b.x - 140) {
+    while (state.hazards.length > 0 && state.hazards[0].x < b.x - 120) {
       state.hazards.shift()
+    }
+
+    if (b.x > 40000) {
+      rebaseWorldCoordinates()
     }
 
     updateColors(false)
     updateProjections()
-    return { event }
+    stepResult.event = event
+    return stepResult
   }
 
   function getRenderSnapshot() {
-    return {
-      status: state.status,
-      crashReason: state.crashReason,
-      trackColor: state.trackColor,
-      score: state.score,
-      bestScore: state.bestScore,
-      gems: state.gems,
-      bannerText: state.bannerText,
-      bike: state.bike,
-      chartData: state.chartData,
-      gemX: state.gemX,
-      gemY: state.gemY,
-      gem2X: state.gem2X,
-      gem2Y: state.gem2Y,
-      hazX: state.hazX,
-      hazY: state.hazY,
-      haz2X: state.haz2X,
-      haz2Y: state.haz2Y
-    }
+    renderSnapshot.status = state.status
+    renderSnapshot.crashReason = state.crashReason
+    renderSnapshot.trackColor = state.trackColor
+    renderSnapshot.score = state.score
+    renderSnapshot.bestScore = state.bestScore
+    renderSnapshot.gems = state.gems
+    renderSnapshot.bannerText = state.bannerText
+    renderSnapshot.gemX = state.gemX
+    renderSnapshot.gemY = state.gemY
+    renderSnapshot.gem2X = state.gem2X
+    renderSnapshot.gem2Y = state.gem2Y
+    renderSnapshot.hazX = state.hazX
+    renderSnapshot.hazY = state.hazY
+    renderSnapshot.haz2X = state.haz2X
+    renderSnapshot.haz2Y = state.haz2Y
+    return renderSnapshot
   }
 
   resetWorld()
