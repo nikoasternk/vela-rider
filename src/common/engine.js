@@ -627,8 +627,12 @@ export function createGameEngine(initialSeed = 20261110) {
         const downhillBoost = sinA > 0 ? sinA * 215 : 0
         b.speed += (275 + uphillBoost + downhillBoost) * dt
       } else {
-        if (b.onSteepDrop && b.speed > 134) {
-          b.speed = Math.max(130, b.speed - 280 * dt)
+        if (b.onSteepDrop && b.speed > 40) {
+          if (b.speed > 132) {
+            b.speed = Math.max(130, b.speed - 280 * dt)
+          } else {
+            b.speed = 130
+          }
         } else if (sinA > 0.12) {
           const targetCoast = 148
           if (b.speed < targetCoast) {
@@ -693,6 +697,7 @@ export function createGameEngine(initialSeed = 20261110) {
       b.vy += gravity * dt
       b.y += b.vy * dt
 
+      const ground = sampleTerrainInto(b.x, terrainOutMain)
       const maxSpin = state.turboFlip ? 10.6 : 8.6
       const spinAcc = state.turboFlip ? 38.0 : 29.0
 
@@ -700,8 +705,10 @@ export function createGameEngine(initialSeed = 20261110) {
         b.angVel = Math.max(-maxSpin, b.angVel - spinAcc * dt)
       } else {
         b.angVel *= Math.max(0, 1 - 16.0 * dt)
-        if (b.airFlips > 0 && Math.abs(b.angle) < 1.35) {
-          b.angle *= Math.max(0, 1 - 8.0 * dt)
+        const targetAngle = ground.abyss ? 0 : ground.angle
+        const angleErr = normalizeAngle(targetAngle - b.angle)
+        if (b.airFlips > 0 && Math.abs(angleErr) < 1.45) {
+          b.angle = normalizeAngle(b.angle + angleErr * Math.min(1, 9.0 * dt))
         }
       }
 
@@ -719,7 +726,6 @@ export function createGameEngine(initialSeed = 20261110) {
         }
       }
 
-      const ground = sampleTerrainInto(b.x, terrainOutMain)
       if (ground.abyss && b.y > ground.lipY + 24 && b.vy > 30) {
         triggerCrash('В ПРОПАСТЬ!')
         stepResult.event = 'crash'
