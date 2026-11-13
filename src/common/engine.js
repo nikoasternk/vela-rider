@@ -609,10 +609,6 @@ export function createGameEngine(initialSeed = 20261110) {
     addAbyssChain(1, allowAbyss, allowSaws)
     addHighMountainWithSaw(allowSaws, false)
 
-    for (let i = 0; i < 4; i++) {
-      appendProceduralChunk()
-    }
-
     const startSample = sampleTerrainInto(50, terrainOutMain)
     state.bike.x = 50
     state.bike.y = startSample.y - 6
