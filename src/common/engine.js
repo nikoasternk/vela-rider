@@ -258,7 +258,7 @@ export function createGameEngine(initialSeed = 20261113) {
       addSegment(64, 0.0, false, false)
     } else if (mType === 1) {
       addSegment(104, -0.95, false, false)
-      addSegment(76, -0.60, true, false)
+      addSegment(76, -0.60, false, false)
       const crestX = state.lastX
       const crestY = state.lastY
       addSegment(48, 1.35, true, false)
@@ -605,7 +605,7 @@ export function createGameEngine(initialSeed = 20261113) {
 
     if (b.onGround) {
       const cur = sampleTerrainInto(b.x, terrainOutMain)
-      const ahead = sampleTerrainInto(b.x + 56, terrainOutAux)
+      const ahead = sampleTerrainInto(b.x + 48, terrainOutAux)
       b.onSteepDrop = cur.overSawZone || ahead.overSawZone
 
       if (cur.abyss && b.y > cur.lipY + 18) {
@@ -623,7 +623,13 @@ export function createGameEngine(initialSeed = 20261113) {
         b.wheelie += (targetWheelie - b.wheelie) * Math.min(1, 10 * dt)
       } else {
         b.wheelie += (0 - b.wheelie) * Math.min(1, 14 * dt)
-        if (sinA > 0.22) {
+        if (b.onSteepDrop && b.speed > 35) {
+          if (b.speed > 94) {
+            b.speed = Math.max(92, b.speed - 480 * dt)
+          } else {
+            b.speed = 92
+          }
+        } else if (sinA > 0.22) {
           const coastTarget = 132
           if (b.speed < coastTarget) {
             b.speed = Math.min(coastTarget, b.speed + sinA * 260 * dt)
@@ -631,7 +637,7 @@ export function createGameEngine(initialSeed = 20261113) {
             b.speed = Math.max(coastTarget, b.speed - 480 * dt)
           }
         } else if (sinA < -0.22) {
-          b.speed += sinA * 380 * dt - (b.speed > 0 ? 260 : -140) * dt
+          b.speed += sinA * 290 * dt - (b.speed > 0 ? 45 : -45) * dt
           if (b.speed < -85) b.speed = -85
         } else {
           if (b.speed > 0) {
