@@ -199,7 +199,7 @@ for (let i = 0; i < 100; i++) {
 check(
   safeBot.state.bike.x > crestSafe.x0 + 110 && minClearance > 26,
   'OVER_PEAK_SAW_CLEARANCE_GAP',
-  { bikeX: safeBot.state.bike.x, minClearance }
+  { bikeX: safeBot.state.bike.x, targetX: crestSafe.x0 + 110, minClearance }
 )
 console.log('[PASS] Over-Peak Saw kinematics OK:', { minClearance: Math.round(minClearance) })
 
@@ -214,7 +214,7 @@ jumpEngine.state.bike.speed = 235
 jumpEngine.state.bike.onGround = true
 for (let i = 0; i < 65; i++) {
   const b = jumpEngine.state.bike
-  const hold = b.onGround || b.airFlips < 1
+  const hold = b.onGround || b.airFlips < 1 || b.angle > 0.35
   jumpEngine.step(0.016, hold)
   check(jumpEngine.state.status === 'playing', 'JUMP_OVER_SAW_STEP_' + i, {
     step: i,
@@ -275,7 +275,7 @@ for (let i = 0; i < 800; i++) {
     zoom125.startGame()
   }
   const b = zoom100.state.bike
-  const hold = (b.onGround && !b.onSteepDrop) || (!b.onGround && b.airFlips < 1)
+  const hold = (b.onGround && !b.onSteepDrop) || (!b.onGround && (b.airFlips < 1 || b.angle > 0.35))
   zoom100.step(0.016, hold)
   zoom70.step(0.016, hold)
   zoom125.step(0.016, hold)
@@ -308,7 +308,7 @@ for (let i = 0; i < 3000; i++) {
     proBot.startGame()
   }
   const b = proBot.state.bike
-  const hold = (b.onGround && !b.onSteepDrop) || (!b.onGround && (b.airFlips < 1 || Math.abs(b.angle) > 0.6))
+  const hold = (b.onGround && !b.onSteepDrop) || (!b.onGround && (b.airFlips < 1 || b.angle > 0.35))
   const res = proBot.step(0.016, hold)
   if (res.event === 'flip') flipsDone += 1
   if (res.event === 'land') landingsDone += 1
@@ -333,7 +333,7 @@ console.log('[TEST 10/10] Running 15,000-step endurance & memory stability test.
 for (let i = 0; i < 15000; i++) {
   if (proBot.state.status !== 'playing') proBot.startGame()
   const b = proBot.state.bike
-  const hold = (b.onGround && !b.onSteepDrop) || (!b.onGround && (b.airFlips < 1 || Math.abs(b.angle) > 0.6))
+  const hold = (b.onGround && !b.onSteepDrop) || (!b.onGround && (b.airFlips < 1 || b.angle > 0.35))
   proBot.step(0.016, hold)
   check(proBot.state.segs.length <= 36, 'ENDURANCE_SEGS_BOUNDED', {
     step: i,
