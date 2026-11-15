@@ -1,0 +1,419 @@
+import fs from 'fs'
+import path from 'path'
+import vm from 'vm'
+
+function check(condition, testName, debugPayload) {
+  if (!condition) {
+    console.error('========================================')
+    console.error('[DIAGNOSTIC FAIL]:', testName)
+    console.error('[DEBUG PAYLOAD]:', JSON.stringify(debugPayload, null, 2))
+    console.error('========================================')
+    process.exit(1)
+  }
+}
+
+const manifestRaw = fs.readFileSync(path.resolve('src/manifest.json'), 'utf8')
+const manifest = JSON.parse(manifestRaw)
+check(manifest.package === 'com.band.rider', 'MANIFEST_PACKAGE_NAME', {
+  actualPackage: manifest.package
+})
+
+const workflowRaw = fs.readFileSync(path.resolve('.github/workflows/build.yml'), 'utf8')
+check(
+  workflowRaw.includes('workflow_dispatch') && !workflowRaw.includes('branches:'),
+  'WORKFLOW_MANUAL_ONLY',
+  { workflowRaw }
+)
+
+const expectedSprites = [
+  'src/common/logo.png',
+  'src/common/bike_0.png',
+  'src/common/bike_1.png',
+  'src/common/bike_2.png',
+  'src/common/bike_3.png',
+  'src/common/bike_4.png',
+  'src/common/saw.png',
+  'src/common/gem.png',
+  'src/common/boost.png'
+]
+for (const sp of expectedSprites) {
+  const full = path.resolve(sp)
+  check(fs.existsSync(full) && fs.statSync(full).size > 80, 'SPRITE_EXISTS_' + sp, { sp })
+}
+
+const uxRaw = fs.readFileSync(path.resolve('src/pages/index/index.ux'), 'utf8')
+check(
+  uxRaw.includes('<scroll class="scroll-window" scroll-y="true"') &&
+    uxRaw.includes('axisTick: 15') &&
+    uxRaw.includes('ROTATE_TABLE'),
+  'BAND10_UI_AND_CHART_SPEC',
+  {}
+)
+
+const filesToScan = [
+  'src/common/engine.js',
+  'src/pages/index/index.ux',
+  'tools/gen-icon.mjs',
+  'src/app.ux'
+]
+for (const file of filesToScan) {
+  const txt = fs.readFileSync(path.resolve(file), 'utf8')
+  const hasComment =
+    /(^|\s)\/\//.test(txt) || txt.includes('/*') || txt.includes('<!--')
+  check(!hasComment, 'ZERO_COMMENTS_IN_' + file, { file })
+}
+
+const source = fs.readFileSync(path.resolve('src/common/engine.js'), 'utf8')
+let openBraces = 0
+for (let i = 0; i < source.length; i++) {
+  if (source[i] === '{') openBraces += 1
+  else if (source[i] === '}') openBraces -= 1
+}
+check(openBraces === 0 && source.trim().endsWith('}'), 'ENGINE_JS_SYNTAX_COMPLETE', {
+  openBraces,
+  totalLines: source.split('\n').length
+})
+
+const cjsSource =
+  source.replace(/export const /g, 'const ').replace(/export function /g, 'function ') +
+  '\nmodule.exports = { VIEW_W, VIEW_H, CHART_POINTS, POINT_STEP, BIKE_SCREEN_X, SECTION_LENGTH, RAINBOW_COLORS, computeRainbowTrackColor, computeDarkFillColor, createGameEngine };'
+const sandbox = { module: { exports: {} }, Math, Array, Boolean, parseInt }
+vm.runInNewContext(cjsSource, sandbox, { filename: 'src/common/engine.js' })
+
+const {
+  createGameEngine,
+  computeRainbowTrackColor,
+  computeDarkFillColor,
+  RAINBOW_COLORS,
+  SECTION_LENGTH,
+  CHART_POINTS,
+  POINT_STEP,
+  VIEW_W,
+  VIEW_H
+} = sandbox.module.exports
+
+console.log('[TEST 1/11] Checking rainbow color & dark fill interpolation...')
+check(RAINBOW_COLORS.length === 7, 'RAINBOW_COLORS_LEN', { len: RAINBOW_COLORS.length })
+for (let i = 0; i < 7; i++) {
+  const cStart = computeRainbowTrackColor(i * SECTION_LENGTH + 50)
+  const cMid = computeRainbowTrackColor(i * SECTION_LENGTH + 600)
+  const fill = computeDarkFillColor(cStart)
+  check(cStart === RAINBOW_COLORS[i] && cMid === RAINBOW_COLORS[i] && fill.length === 7, 'RAINBOW_SECTION_' + i, {
+    i,
+    cStart,
+    cMid,
+    fill
+  })
+}
+console.log('[PASS] Rainbow color & fill OK')
+
+console.log('[TEST 2/11] Checking Band 10 LVGL integer chart grid (16 pts, 210x350) & spline continuity...')
+const engine = createGameEngine(1337)
+engine.startGame()
+check(
+  CHART_POINTS === 16 &&
+    POINT_STEP === 14 &&
+    VIEW_W === 210 &&
+    VIEW_H === 350 &&
+    (CHART_POINTS - 1) * POINT_STEP === VIEW_W,
+  'EXACT_BAND10_CHART_GRID',
+  { CHART_POINTS, POINT_STEP, VIEW_W, VIEW_H }
+)
+for (let i = 1; i < engine.state.segs.length; i++) {
+  const prev = engine.state.segs[i - 1]
+  const curr = engine.state.segs[i]
+  if (!prev.abyss && !curr.abyss) {
+    check(Math.abs(prev.y1 - curr.y0) < 0.01, 'Y_CONTINUITY_AT_SEG_' + i, {
+      i,
+      prevY1: prev.y1,
+      currY0: curr.y0
+    })
+    if (!curr.sharp) {
+      check(Math.abs(prev.m1 - curr.m0) < 0.01, 'C1_CONTINUITY_AT_SEG_' + i, {
+        i,
+        prevM1: prev.m1,
+        currM0: curr.m0
+      })
+    }
+  }
+}
+console.log('[PASS] Band 10 chart grid & spline continuity OK')
+
+console.log('[TEST 3/11] Checking acceleration, booster overspeed & braking...')
+const accEngine = createGameEngine(2026)
+accEngine.startGame()
+const initialSpeed = accEngine.state.bike.speed
+accEngine.step(0.016, true)
+const afterOneFrameSpeed = accEngine.state.bike.speed
+check(
+  initialSpeed === 48 && afterOneFrameSpeed - initialSpeed < 7.0 && afterOneFrameSpeed > initialSpeed,
+  'GRADUAL_ACCELERATION',
+  { initialSpeed, afterOneFrameSpeed }
+)
+for (let i = 0; i < 35; i++) accEngine.step(0.016, true)
+const speedBeforeBrake = accEngine.state.bike.speed
+for (let i = 0; i < 80; i++) accEngine.step(0.016, false)
+check(
+  speedBeforeBrake > 140 && accEngine.state.bike.speed === 0,
+  'BRAKE_TO_ZERO_ON_FLAT',
+  { speedBeforeBrake, speedAfterBrake: accEngine.state.bike.speed }
+)
+console.log('[PASS] Acceleration & braking OK')
+
+console.log('[TEST 4/11] Checking analytical Newtonian curvature takeoff...')
+const launchEngine = createGameEngine(2026)
+launchEngine.startGame()
+const overSeg = launchEngine.state.segs.find((s) => s.overSawZone && s.m1 > 1.0)
+check(Boolean(overSeg), 'FIND_CURVED_CREST', {})
+launchEngine.state.bike.x = overSeg.x0 - 12
+launchEngine.state.bike.y = overSeg.y0 - 7
+launchEngine.state.bike.speed = 235
+launchEngine.state.bike.onGround = true
+let naturalTakeoff = false
+for (let i = 0; i < 18; i++) {
+  launchEngine.step(0.016, true)
+  if (!launchEngine.state.bike.onGround && launchEngine.state.bike.vy < -75) {
+    naturalTakeoff = true
+    break
+  }
+}
+check(naturalTakeoff, 'ANALYTICAL_CENTRIPETAL_TAKEOFF', {
+  onGround: launchEngine.state.bike.onGround,
+  vy: launchEngine.state.bike.vy
+})
+console.log('[PASS] Analytical curvature takeoff OK')
+
+console.log('[TEST 5/11] Checking Over-Peak Saw (fly into saw on gas, roll under on coast)...')
+const hitBot = createGameEngine(2026)
+hitBot.startGame()
+const crestHit = hitBot.state.segs.find((s) => s.overSawZone && s.m1 > 1.0)
+hitBot.state.bike.x = crestHit.x0 - 12
+hitBot.state.bike.y = crestHit.y0 - 7
+hitBot.state.bike.speed = 225
+hitBot.state.bike.onGround = true
+for (let i = 0; i < 55; i++) {
+  hitBot.step(0.016, true)
+  if (hitBot.state.status === 'crashing' || hitBot.state.status === 'gameover') break
+}
+check(
+  (hitBot.state.status === 'crashing' || hitBot.state.status === 'gameover') &&
+    hitBot.state.crashReason === 'ПИЛА!',
+  'OVER_PEAK_SAW_HIT_ON_GAS',
+  { status: hitBot.state.status, crashReason: hitBot.state.crashReason }
+)
+
+const safeBot = createGameEngine(2026)
+safeBot.startGame()
+const crestSafe = safeBot.state.segs.find((s) => s.overSawZone && s.m1 > 1.0)
+const overSaw = safeBot.state.hazards.find((h) => Math.abs(h.x - (crestSafe.x0 + 56)) < 6)
+check(Boolean(overSaw), 'FIND_OVER_PEAK_SAW', {})
+safeBot.state.bike.x = crestSafe.x0 - 45
+safeBot.state.bike.y = crestSafe.y0 + 20
+safeBot.state.bike.speed = 115
+safeBot.state.bike.onGround = true
+let minClearance = 9999
+for (let i = 0; i < 140; i++) {
+  safeBot.step(0.016, false)
+  const d = Math.hypot(overSaw.x - safeBot.state.bike.x, overSaw.y - safeBot.state.bike.y)
+  if (d < minClearance) minClearance = d
+  check(safeBot.state.status === 'playing', 'OVER_PEAK_SAW_SAFE_ROLL_STEP_' + i, {
+    step: i,
+    status: safeBot.state.status,
+    crashReason: safeBot.state.crashReason,
+    minClearance
+  })
+}
+check(
+  safeBot.state.bike.x > crestSafe.x0 + 95 && minClearance > 20,
+  'OVER_PEAK_SAW_CLEARANCE_GAP',
+  { bikeX: safeBot.state.bike.x, targetX: crestSafe.x0 + 95, minClearance }
+)
+console.log('[PASS] Over-Peak Saw kinematics OK:', { minClearance: Math.round(minClearance) })
+
+console.log('[TEST 6/11] Checking Road Saw Jump...')
+const jumpEngine = createGameEngine(2026)
+jumpEngine.startGame()
+const roadSaw = jumpEngine.state.hazards[jumpEngine.state.hazards.length - 1]
+check(Boolean(roadSaw), 'FIND_ROAD_SAW', {})
+jumpEngine.state.bike.x = roadSaw.x - 85
+jumpEngine.state.bike.y = roadSaw.y + 42
+jumpEngine.state.bike.speed = 240
+jumpEngine.state.bike.onGround = true
+for (let i = 0; i < 70; i++) {
+  const b = jumpEngine.state.bike
+  const hold = b.onGround || b.airFlips < 1 || b.angle > 0.35
+  jumpEngine.step(0.016, hold)
+  check(jumpEngine.state.status === 'playing', 'JUMP_OVER_ROAD_SAW_' + i, {
+    step: i,
+    crashReason: jumpEngine.state.crashReason,
+    bikeX: b.x,
+    bikeY: b.y
+  })
+}
+check(jumpEngine.state.bike.x > roadSaw.x + 25, 'CLEARED_ROAD_SAW', {
+  bikeX: jumpEngine.state.bike.x,
+  roadSawX: roadSaw.x
+})
+console.log('[PASS] Road Saw jump OK')
+
+console.log('[TEST 7/11] Checking abyss fall, cliff wall slam & debris -> gameover lifecycle...')
+const abyssFallBot = createGameEngine(2026)
+abyssFallBot.startGame()
+const firstAbyss = abyssFallBot.state.segs.find((s) => s.abyss)
+abyssFallBot.state.bike.x = firstAbyss.x0 - 3
+abyssFallBot.state.bike.y = firstAbyss.y0 - 7
+abyssFallBot.state.bike.speed = 65
+abyssFallBot.state.bike.onGround = true
+for (let i = 0; i < 80; i++) {
+  abyssFallBot.step(0.016, false)
+  if (abyssFallBot.state.status === 'crashing') break
+}
+check(
+  abyssFallBot.state.status === 'crashing' && abyssFallBot.state.crashReason === 'В ПРОПАСТЬ!',
+  'LOW_SPEED_FALLS_INTO_ABYSS',
+  { status: abyssFallBot.state.status, reason: abyssFallBot.state.crashReason }
+)
+for (let i = 0; i < 50; i++) {
+  abyssFallBot.step(0.016, false)
+  if (abyssFallBot.state.status === 'gameover') break
+}
+check(abyssFallBot.state.status === 'gameover', 'DEBRIS_TRANSITIONS_TO_GAMEOVER', {
+  status: abyssFallBot.state.status
+})
+
+const wallBot = createGameEngine(2026)
+wallBot.startGame()
+wallBot.state.bike.x = firstAbyss.x1 - 4
+wallBot.state.bike.y = firstAbyss.landY + 26
+wallBot.state.bike.vx = 180
+wallBot.state.bike.vy = 10
+wallBot.state.bike.onGround = false
+for (let i = 0; i < 10; i++) {
+  wallBot.step(0.016, false)
+  if (wallBot.state.status === 'crashing') break
+}
+check(
+  wallBot.state.status === 'crashing' && wallBot.state.crashReason === 'В СТЕНУ!',
+  'CLIFF_WALL_COLLISION',
+  { status: wallBot.state.status, reason: wallBot.state.crashReason }
+)
+console.log('[PASS] Abyss, cliff wall & debris lifecycle OK')
+
+console.log('[TEST 8/11] Checking reckless hold bot crashes...')
+const holdBot = createGameEngine(2026)
+holdBot.startGame()
+for (let i = 0; i < 450; i++) {
+  holdBot.step(0.016, true)
+  if (holdBot.state.status === 'crashing' || holdBot.state.status === 'gameover') break
+}
+check(
+  holdBot.state.status === 'crashing' || holdBot.state.status === 'gameover',
+  'RECKLESS_HOLD_BOT_CRASHES',
+  { status: holdBot.state.status }
+)
+console.log('[PASS] Reckless hold crash OK')
+
+console.log('[TEST 9/11] Checking zoom invariance...')
+const zoom100 = createGameEngine(7777)
+const zoom75 = createGameEngine(7777)
+const zoom120 = createGameEngine(7777)
+zoom100.state.zoomScale = 1.0
+zoom75.state.zoomScale = 0.75
+zoom120.state.zoomScale = 1.2
+zoom100.startGame()
+zoom75.startGame()
+zoom120.startGame()
+for (let i = 0; i < 800; i++) {
+  if (zoom100.state.status !== 'playing') {
+    zoom100.startGame()
+    zoom75.startGame()
+    zoom120.startGame()
+  }
+  const b = zoom100.state.bike
+  const hold = (b.onGround && !b.sawAhead) || (!b.onGround && (b.airFlips < 1 || b.angle > 0.3))
+  zoom100.step(0.016, hold)
+  zoom75.step(0.016, hold)
+  zoom120.step(0.016, hold)
+  check(
+    zoom100.state.bike.x === zoom75.state.bike.x &&
+      zoom100.state.bike.x === zoom120.state.bike.x &&
+      zoom100.state.bike.y === zoom75.state.bike.y &&
+      zoom100.state.bike.y === zoom120.state.bike.y &&
+      zoom100.state.bike.speed === zoom75.state.bike.speed &&
+      zoom100.state.bike.speed === zoom120.state.bike.speed &&
+      zoom100.state.status === zoom75.state.status &&
+      zoom100.state.status === zoom120.state.status,
+    'ZOOM_PHYSICS_INVARIANCE_STEP_' + i,
+    { step: i }
+  )
+}
+console.log('[PASS] Zoom invariance OK')
+
+console.log('[TEST 10/11] Running proBot skill, flips, perfect landings & missions...')
+const proBot = createGameEngine(2026)
+proBot.startGame()
+let flipsDone = 0
+let landingsDone = 0
+let perfectsDone = 0
+for (let i = 0; i < 3200; i++) {
+  if (proBot.state.status !== 'playing') {
+    proBot.startGame()
+  }
+  const b = proBot.state.bike
+  const hold = (b.onGround && !b.sawAhead) || (!b.onGround && (b.airFlips < 1 || b.angle > 0.25))
+  const res = proBot.step(0.016, hold)
+  if (res.event === 'flip') flipsDone += 1
+  if (res.event === 'land' || res.event === 'perfect') landingsDone += 1
+  if (res.event === 'perfect') perfectsDone += 1
+
+  const snap = proBot.getRenderSnapshot()
+  for (let j = 0; j < snap.chartData.length; j++) {
+    const val = snap.chartData[j]
+    check(val === 0 || (val >= 12 && val <= VIEW_H - 6), 'PROBOT_CHART_BOUNDS', {
+      step: i,
+      j,
+      val
+    })
+  }
+}
+check(flipsDone >= 10 && landingsDone >= 8, 'PROBOT_FLIPS_AND_LANDINGS', {
+  flipsDone,
+  landingsDone,
+  perfectsDone
+})
+console.log('[PASS] proBot skill OK:', { flipsDone, landingsDone, perfectsDone })
+
+console.log('[TEST 11/11] Running 15,000-step endurance & memory stability test...')
+for (let i = 0; i < 15000; i++) {
+  if (proBot.state.status !== 'playing') proBot.startGame()
+  const b = proBot.state.bike
+  const hold = (b.onGround && !b.sawAhead) || (!b.onGround && (b.airFlips < 1 || b.angle > 0.25))
+  proBot.step(0.016, hold)
+  check(proBot.state.segs.length <= 48, 'ENDURANCE_SEGS_BOUNDED', {
+    step: i,
+    segsLen: proBot.state.segs.length
+  })
+  check(proBot.state.worldGems.length <= 36, 'ENDURANCE_GEMS_BOUNDED', {
+    step: i,
+    gemsLen: proBot.state.worldGems.length
+  })
+  check(proBot.state.hazards.length <= 24, 'ENDURANCE_HAZARDS_BOUNDED', {
+    step: i,
+    hazardsLen: proBot.state.hazards.length
+  })
+  check(proBot.state.pits.length <= 24, 'ENDURANCE_PITS_BOUNDED', {
+    step: i,
+    pitsLen: proBot.state.pits.length
+  })
+  check(proBot.state.bike.x <= 42000, 'ENDURANCE_WORLD_X_REBASED', {
+    step: i,
+    bikeX: proBot.state.bike.x
+  })
+}
+console.log('[PASS] 15,000-step endurance OK')
+console.log('ALL_11_RIDER_BAND10_SUITES_PASSED_OK', {
+  flipsDone,
+  landingsDone,
+  perfectsDone,
+  bestScore: proBot.state.bestScore
+})
