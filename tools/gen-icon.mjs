@@ -2,65 +2,6 @@ import fs from 'fs'
 import path from 'path'
 import zlib from 'zlib'
 
-const width = 192
-const height = 192
-const raw = Buffer.alloc(height * (1 + width * 4), 0)
-
-function setPixel(x, y, r, g, b, a) {
-  if (x < 0 || x >= width || y < 0 || y >= height) return
-  const rowOffset = y * (1 + width * 4)
-  const idx = rowOffset + 1 + x * 4
-  raw[idx] = r
-  raw[idx + 1] = g
-  raw[idx + 2] = b
-  raw[idx + 3] = a
-}
-
-function drawCircleRing(cx, cy, rOuter, rInner, r, g, b) {
-  const rOut2 = rOuter * rOuter
-  const rIn2 = rInner * rInner
-  for (let y = Math.floor(cy - rOuter); y <= Math.ceil(cy + rOuter); y++) {
-    for (let x = Math.floor(cx - rOuter); x <= Math.ceil(cx + rOuter); x++) {
-      const dx = x - cx
-      const dy = y - cy
-      const d2 = dx * dx + dy * dy
-      if (d2 <= rOut2 && d2 >= rIn2) {
-        setPixel(x, y, r, g, b, 255)
-      }
-    }
-  }
-}
-
-function drawThickLine(x0, y0, x1, y1, radius, r, g, b) {
-  const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) * 2
-  for (let i = 0; i <= steps; i++) {
-    const t = steps === 0 ? 0 : i / steps
-    const x = x0 + (x1 - x0) * t
-    const y = y0 + (y1 - y0) * t
-    drawCircleRing(x, y, radius, 0, r, g, b)
-  }
-}
-
-for (let y = 0; y < height; y++) {
-  raw[y * (1 + width * 4)] = 0
-  for (let x = 0; x < width; x++) {
-    const dx = x - 96
-    const dy = y - 96
-    if (dx * dx + dy * dy <= 90 * 90) {
-      setPixel(x, y, 8, 12, 24, 255)
-    }
-  }
-}
-
-drawCircleRing(96, 96, 90, 84, 0, 240, 255)
-drawThickLine(22, 146, 170, 114, 4, 255, 0, 85)
-drawCircleRing(58, 112, 20, 12, 0, 240, 255)
-drawCircleRing(134, 96, 20, 12, 0, 240, 255)
-drawThickLine(58, 112, 94, 82, 5, 0, 240, 255)
-drawThickLine(94, 82, 134, 96, 5, 0, 240, 255)
-drawThickLine(58, 112, 134, 96, 4, 255, 0, 85)
-drawCircleRing(92, 66, 10, 0, 255, 215, 0)
-
 const crcTable = new Uint32Array(256)
 for (let n = 0; n < 256; n++) {
   let c = n
@@ -88,24 +29,275 @@ function makeChunk(type, data) {
   return Buffer.concat([len, typeBuf, data, crcBuf])
 }
 
-const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
-const ihdr = Buffer.alloc(13)
-ihdr.writeUInt32BE(width, 0)
-ihdr.writeUInt32BE(height, 4)
-ihdr[8] = 8
-ihdr[9] = 6
-ihdr[10] = 0
-ihdr[11] = 0
-ihdr[12] = 0
+function encodePng(width, height, rgba) {
+  const raw = Buffer.alloc(height * (1 + width * 4), 0)
+  for (let y = 0; y < height; y++) {
+    const rowOff = y * (1 + width * 4)
+    raw[rowOff] = 0
+    rgba.copy(raw, rowOff + 1, y * width * 4, (y + 1) * width * 4)
+  }
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
+  ihdr[8] = 8
+  ihdr[9] = 6
+  ihdr[10] = 0
+  ihdr[11] = 0
+  ihdr[12] = 0
+  const idatData = zlib.deflateSync(raw, { level: 9 })
+  return Buffer.concat([
+    signature,
+    makeChunk('IHDR', ihdr),
+    makeChunk('IDAT', idatData),
+    makeChunk('IEND', Buffer.alloc(0))
+  ])
+}
 
-const idatData = zlib.deflateSync(raw, { level: 9 })
-const png = Buffer.concat([
-  signature,
-  makeChunk('IHDR', ihdr),
-  makeChunk('IDAT', idatData),
-  makeChunk('IEND', Buffer.alloc(0))
-])
+function createSurface(w, h) {
+  const buf = Buffer.alloc(w * h * 4, 0)
+  return { w, h, buf }
+}
+
+function blendPixel(s, x, y, r, g, b, a) {
+  if (x < 0 || x >= s.w || y < 0 || y >= s.h || a <= 0) return
+  const idx = (y * s.w + x) * 4
+  const sa = a / 255
+  const da = s.buf[idx + 3] / 255
+  const outA = sa + da * (1 - sa)
+  if (outA <= 0) return
+  s.buf[idx] = Math.round((r * sa + s.buf[idx] * da * (1 - sa)) / outA)
+  s.buf[idx + 1] = Math.round((g * sa + s.buf[idx + 1] * da * (1 - sa)) / outA)
+  s.buf[idx + 2] = Math.round((b * sa + s.buf[idx + 2] * da * (1 - sa)) / outA)
+  s.buf[idx + 3] = Math.round(outA * 255)
+}
+
+function drawDisc(s, cx, cy, rad, r, g, b, a) {
+  const x0 = Math.max(0, Math.floor(cx - rad - 1))
+  const x1 = Math.min(s.w - 1, Math.ceil(cx + rad + 1))
+  const y0 = Math.max(0, Math.floor(cy - rad - 1))
+  const y1 = Math.min(s.h - 1, Math.ceil(cy + rad + 1))
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const d = Math.hypot(x - cx, y - cy)
+      if (d <= rad + 0.8) {
+        const cov = Math.max(0, Math.min(1, rad + 0.5 - d))
+        blendPixel(s, x, y, r, g, b, Math.round(a * cov))
+      }
+    }
+  }
+}
+
+function drawRing(s, cx, cy, rOuter, rInner, r, g, b, a) {
+  const x0 = Math.max(0, Math.floor(cx - rOuter - 1))
+  const x1 = Math.min(s.w - 1, Math.ceil(cx + rOuter + 1))
+  const y0 = Math.max(0, Math.floor(cy - rOuter - 1))
+  const y1 = Math.min(s.h - 1, Math.ceil(cy + rOuter + 1))
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const d = Math.hypot(x - cx, y - cy)
+      if (d <= rOuter + 0.8 && d >= rInner - 0.8) {
+        const cOut = Math.max(0, Math.min(1, rOuter + 0.5 - d))
+        const cIn = Math.max(0, Math.min(1, d - rInner + 0.5))
+        blendPixel(s, x, y, r, g, b, Math.round(a * Math.min(cOut, cIn)))
+      }
+    }
+  }
+}
+
+function distToSeg(px, py, x0, y0, x1, y1) {
+  const vx = x1 - x0
+  const vy = y1 - y0
+  const len2 = vx * vx + vy * vy
+  if (len2 === 0) return Math.hypot(px - x0, py - y0)
+  const t = Math.max(0, Math.min(1, ((px - x0) * vx + (py - y0) * vy) / len2))
+  return Math.hypot(px - (x0 + vx * t), py - (y0 + vy * t))
+}
+
+function drawCapsule(s, x0, y0, x1, y1, rad, r, g, b, a) {
+  const minX = Math.max(0, Math.floor(Math.min(x0, x1) - rad - 1))
+  const maxX = Math.min(s.w - 1, Math.ceil(Math.max(x0, x1) + rad + 1))
+  const minY = Math.max(0, Math.floor(Math.min(y0, y1) - rad - 1))
+  const maxY = Math.min(s.h - 1, Math.ceil(Math.max(y0, y1) + rad + 1))
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const d = distToSeg(x, y, x0, y0, x1, y1)
+      if (d <= rad + 0.8) {
+        const cov = Math.max(0, Math.min(1, rad + 0.5 - d))
+        blendPixel(s, x, y, r, g, b, Math.round(a * cov))
+      }
+    }
+  }
+}
+
+function downsample2x(hi) {
+  const w = (hi.w / 2) | 0
+  const h = (hi.h / 2) | 0
+  const out = Buffer.alloc(w * h * 4, 0)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let sr = 0
+      let sg = 0
+      let sb = 0
+      let sa = 0
+      for (let oy = 0; oy < 2; oy++) {
+        for (let ox = 0; ox < 2; ox++) {
+          const i = ((y * 2 + oy) * hi.w + (x * 2 + ox)) * 4
+          const a = hi.buf[i + 3]
+          sr += hi.buf[i] * a
+          sg += hi.buf[i + 1] * a
+          sb += hi.buf[i + 2] * a
+          sa += a
+        }
+      }
+      const o = (y * w + x) * 4
+      if (sa > 0) {
+        out[o] = Math.round(sr / sa)
+        out[o + 1] = Math.round(sg / sa)
+        out[o + 2] = Math.round(sb / sa)
+        out[o + 3] = Math.round(sa / 4)
+      }
+    }
+  }
+  return { w, h, buf: out }
+}
+
+function buildLogoPng() {
+  const s = createSurface(192, 192)
+  drawDisc(s, 96, 96, 91, 6, 12, 24, 255)
+  drawRing(s, 96, 96, 91, 84, 0, 235, 255, 255)
+  drawRing(s, 96, 96, 84, 80, 0, 120, 180, 140)
+  let prevX = 16
+  let prevY = 148
+  for (let x = 20; x <= 176; x += 4) {
+    const t = (x - 16) / 160
+    const y = 148 - 54 * Math.sin(t * 2.4)
+    drawCapsule(s, prevX, prevY, x, y, 7, 255, 24, 110, 70)
+    drawCapsule(s, prevX, prevY, x, y, 3.5, 255, 45, 130, 255)
+    prevX = x
+    prevY = y
+  }
+  drawRing(s, 66, 108, 18, 11, 255, 255, 255, 255)
+  drawRing(s, 66, 108, 12, 8, 0, 240, 255, 255)
+  drawRing(s, 132, 90, 18, 11, 255, 255, 255, 255)
+  drawRing(s, 132, 90, 12, 8, 0, 240, 255, 255)
+  drawCapsule(s, 58, 96, 94, 70, 7, 0, 240, 255, 255)
+  drawCapsule(s, 94, 70, 142, 82, 7, 0, 240, 255, 255)
+  drawCapsule(s, 66, 106, 132, 88, 5, 255, 255, 255, 255)
+  drawCapsule(s, 96, 70, 124, 75, 4, 255, 255, 255, 230)
+  drawDisc(s, 146, 52, 9, 0, 255, 210, 90)
+  drawDisc(s, 146, 52, 5, 255, 255, 255, 255)
+  return encodePng(192, 192, s.buf)
+}
+
+function buildBikePng(primaryRgb, accentRgb) {
+  const hi = createSurface(80, 48)
+  const [pr, pg, pb] = primaryRgb
+  const [ar, ag, ab] = accentRgb
+  drawDisc(hi, 20, 33, 10.5, pr, pg, pb, 75)
+  drawDisc(hi, 60, 33, 10.5, pr, pg, pb, 75)
+  drawRing(hi, 20, 33, 9, 4.5, 255, 255, 255, 255)
+  drawRing(hi, 20, 33, 6.2, 4.2, pr, pg, pb, 220)
+  drawRing(hi, 60, 33, 9, 4.5, 255, 255, 255, 255)
+  drawRing(hi, 60, 33, 6.2, 4.2, pr, pg, pb, 220)
+  drawCapsule(hi, 14, 24, 38, 12, 6, pr, pg, pb, 255)
+  drawCapsule(hi, 38, 12, 66, 22, 6, pr, pg, pb, 255)
+  drawCapsule(hi, 20, 30, 60, 28, 4.5, ar, ag, ab, 255)
+  drawCapsule(hi, 10, 16, 24, 22, 3.5, 255, 255, 255, 255)
+  drawCapsule(hi, 37, 13, 60, 20, 3.5, 255, 255, 255, 240)
+  drawCapsule(hi, 26, 23, 52, 23, 2.5, 255, 255, 255, 220)
+  drawDisc(hi, 68, 22, 3, 255, 255, 255, 255)
+  const lo = downsample2x(hi)
+  return encodePng(lo.w, lo.h, lo.buf)
+}
+
+function buildSawPng() {
+  const hi = createSurface(56, 56)
+  const cx = 28
+  const cy = 28
+  const teeth = 12
+  for (let y = 0; y < 56; y++) {
+    for (let x = 0; x < 56; x++) {
+      const dx = x - cx
+      const dy = y - cy
+      const r = Math.hypot(dx, dy)
+      const ang = Math.atan2(dy, dx)
+      const phase = ((ang / (Math.PI * 2)) * teeth + teeth) % 1
+      const toothR = 19 + 8 * (phase < 0.72 ? phase / 0.72 : (1 - phase) / 0.28)
+      if (r <= toothR + 0.6) {
+        const cov = Math.max(0, Math.min(1, toothR + 0.5 - r))
+        if (r < 5) {
+          blendPixel(hi, x, y, 255, 195, 205, Math.round(255 * cov))
+        } else if (r < 10.5) {
+          blendPixel(hi, x, y, 42, 4, 14, Math.round(255 * cov))
+        } else if (r < 13) {
+          blendPixel(hi, x, y, 255, 85, 105, Math.round(255 * cov))
+        } else {
+          blendPixel(hi, x, y, 255, 36, 68, Math.round(255 * cov))
+        }
+      }
+    }
+  }
+  const lo = downsample2x(hi)
+  return encodePng(lo.w, lo.h, lo.buf)
+}
+
+function buildGemPng() {
+  const hi = createSurface(28, 28)
+  const cx = 14
+  const cy = 14
+  for (let y = 0; y < 28; y++) {
+    for (let x = 0; x < 28; x++) {
+      const md = Math.abs(x - cx) * 1.15 + Math.abs(y - cy) * 0.9
+      if (md <= 12.5) {
+        const glow = Math.max(0, 1 - md / 12.5)
+        blendPixel(hi, x, y, 0, 235, 255, Math.round(130 * glow * glow))
+      }
+      if (md <= 9.2) {
+        const cov = Math.max(0, Math.min(1, 9.2 - md))
+        if (md <= 4.8) {
+          blendPixel(hi, x, y, 240, 255, 255, Math.round(255 * cov))
+        } else {
+          blendPixel(hi, x, y, 0, 245, 255, Math.round(255 * cov))
+        }
+      }
+    }
+  }
+  const lo = downsample2x(hi)
+  return encodePng(lo.w, lo.h, lo.buf)
+}
+
+function buildBoostPng() {
+  const hi = createSurface(64, 20)
+  drawCapsule(hi, 5, 17, 59, 17, 1.8, 0, 255, 145, 240)
+  for (let i = 0; i < 3; i++) {
+    const ox = 14 + i * 16
+    drawCapsule(hi, ox - 4, 4, ox + 3, 9, 2.3, 0, 255, 165, 255)
+    drawCapsule(hi, ox + 3, 9, ox - 4, 14, 2.3, 0, 255, 165, 255)
+    drawCapsule(hi, ox - 3, 5, ox + 2, 9, 1.2, 225, 255, 245, 255)
+    drawCapsule(hi, ox + 2, 9, ox - 3, 13, 1.2, 225, 255, 245, 255)
+  }
+  const lo = downsample2x(hi)
+  return encodePng(lo.w, lo.h, lo.buf)
+}
 
 const outDir = path.resolve('src/common')
 fs.mkdirSync(outDir, { recursive: true })
-fs.writeFileSync(path.join(outDir, 'logo.png'), png)
+fs.writeFileSync(path.join(outDir, 'logo.png'), buildLogoPng())
+
+const bikeSkins = [
+  [[0, 230, 255], [220, 250, 255]],
+  [[0, 245, 110], [210, 255, 225]],
+  [[255, 30, 145], [255, 210, 235]],
+  [[255, 185, 0], [255, 245, 200]],
+  [[165, 70, 255], [140, 225, 255]]
+]
+for (let i = 0; i < bikeSkins.length; i++) {
+  fs.writeFileSync(
+    path.join(outDir, 'bike_' + i + '.png'),
+    buildBikePng(bikeSkins[i][0], bikeSkins[i][1])
+  )
+}
+fs.writeFileSync(path.join(outDir, 'saw.png'), buildSawPng())
+fs.writeFileSync(path.join(outDir, 'gem.png'), buildGemPng())
+fs.writeFileSync(path.join(outDir, 'boost.png'), buildBoostPng())
